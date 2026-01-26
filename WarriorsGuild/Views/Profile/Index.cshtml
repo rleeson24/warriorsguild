@@ -1,0 +1,116 @@
+﻿@model WarriorsGuild.Models.ProfileViewModel
+@using System.Security.Claims
+@{
+    ViewBag.Title = "Warrior Profile | Warriors Guild";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var UserIsWarrior = User.IsInRole("Warrior");
+    var UserIsWarriorString = UserIsWarrior.ToString().ToLower();
+    var HasActiveSubscription = ViewBag.HasActiveSubscription.ToString().ToLower();
+    var profileId = User.FindFirstValue(claimType: "sub");
+}
+@using WarriorsGuild.Utilities
+<!-- ko with: dashboard -->
+<section class="warrior dashboard">
+    <div class="container-fluid">
+        <warior-header params="{
+                                    showFavoriteData: false,
+                                    userId: '@profileId',
+                                    rankDetail: dataModel.CompletedRank
+                                }"></warior-header>
+        <!-- ko if: !dataModel.CompletedRank() -->
+        <div class="row">
+            <h4 class="col-xs-12" data-bind="visible: !RetrievingRank()" style="display:none;">Complete some tasks to get ranked!</h4>
+        </div>
+        <!-- /ko -->
+        
+        <div class="row">
+            <div class="col-md-3">
+            </div>
+            <div class="col-md-5">
+                <div data-bind="visible: !dataModel.WorkingRank() && !RetrievingRank()" style="display:none;">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <h4>Everything Complete!</h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-offset-4 col-sm-4">
+                            <img src="~/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image" class="img-placeholder" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8 col-lg-offset-3 col-lg-6">
+                            <div class="row">
+                                <h4>Congratulations!</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ko with: dataModel.WorkingRank() -->
+                <div class="row" data-bind="visible: !$parent.RetrievingRank()" style="display:none;">
+                    <div class="col-xs-12">
+                        <div class="row working-rank">
+                            <div class="col-xs-7 header">
+                                <div>
+                                    <img data-bind="attr:{ src: imgSrcAttr(), title: description() }" src="~/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image">
+                                </div>
+                                <div>
+                                    <h4>RANK REQUIREMENTS</h4>
+                                    <h4 data-bind="text: name(), attr:{ title: description() }"></h4>
+                                </div>
+                            </div>
+                            <div class="col-xs-5">
+                                <div class="wg-progressbar rank"><div data-bind="style: { width: completedPercent() + '%' }"></div></div>
+                                <div><span data-bind="text: completedPercent()"></span>% complete</div>
+                            </div>
+                        </div>
+                        <div class="row" data-bind="foreach: requirements">
+                            <div class="col-xs-12 text-left col-requirement" data-bind="visible: !requireCross()">
+                                <div class="check">
+                                    <div class="squaredThree" data-bind="css: { completed: guardianReviewed() }">
+                                        <div data-bind="attr: { id: 'rq' + $index(), checked: warriorCompleted() }"></div>
+                                        <label data-bind="attr: { for: 'rq' + $index(), title: completionSummaryText() }"></label>
+                                    </div>
+                                </div>
+                                <span class="actionToComplete" data-bind="html: `${actionToCompleteLinked()}${optional() ? ' (Optional)' : ''}`, css: { outOfReach: @UserIsWarriorString && !warriorCompleted() && ($parent.requestPromotionEnabled() || $parent.pendingApproval()) }"></span>
+                                <div style="width:100%; height: 100%; opacity:.5"></div>
+                            </div>
+                            <div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8" data-bind="visible: requireRing() && warriorCompleted()">
+                                <div class="rankAdditionalRingRequirements">
+                                    <label>Rings:</label>
+                                    <!-- ko foreach: savedRings -->
+                                        <img style="height:40px" data-bind="attr: { src: imgSrcAttr, alt: name, title: name }" />
+                                    <!-- /ko -->
+                                </div>
+                            </div>
+                            <div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8" data-bind="visible: requireCross()">
+                                <div class="row text-center" data-bind="foreach: crossesToComplete">
+                                    <cross-summary params="{crossId: ko.observable($data.id), hasActiveSubscription: @HasActiveSubscription, userIsWarrior: @UserIsWarriorString }" ></cross-summary>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ui-widget-overlay ui-front hidden" style="z-index: 100;"></div>
+                </div>
+                <!-- /ko -->
+            </div>
+        </div>
+    </div>
+</section>
+<!-- /ko -->
+
+<script>
+    var warriorDashboardViewModel = @Html.Raw( Newtonsoft.Json.JsonConvert.SerializeObject( Model,
+    new Newtonsoft.Json.JsonSerializerSettings
+    {
+        ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
+    } ) );
+</script>
+
+@section Styles {
+<link href="@Url.ContentVersioned("~/bundles/jquery-ui.css")" rel="stylesheet" />
+}
+@section Scripts{
+<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+<script src="@Url.ContentVersioned("/bundles/profile.js")" defer></script>
+}

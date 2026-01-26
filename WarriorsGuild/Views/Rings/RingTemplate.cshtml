@@ -1,0 +1,57 @@
+﻿<script type="text/html" id="ring-template">
+	<div class="goal-grid-item">
+
+		<!--ring Name-->
+		<div class="goal-name">
+			<a data-bind="attr: { href: '#detail?id=' + id() }">
+				<h4 data-bind="text: name()"></h4>
+			</a>
+			<div class="pins">
+				<a class="completed" data-bind="visible: isCompleted(), attr: { href: '#detail?id=' + id() }" title="Completed"><span class="glyphicon glyphicon-ok"></span></a>
+				<a class="pin" data-bind="visible: (userIsWarrior || type() == 'Platinum') && !isPinned() && !isCompleted(), click: pin"><span class="glyphicon glyphicon-star-empty"></span></a>
+				<a class="unpin" data-bind="visible: isPinned() && !isCompleted(), click: unpin"><span class="glyphicon glyphicon-star"></span></a>
+				<div class="clearfix"></div>
+			</div>
+		</div>
+		<!--ring Name-->
+		<!--ring Image-->
+		<div class="goal-image">
+			<a href="#detail" data-bind="attr: { href: '#detail?id=' + id() }">
+				<img data-bind="attr:{ src: imgSrcAttr() }, visible: hasImage()" alt="goal-image" class="img-responsive">
+				<img src="/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image" class="img-placeholder" data-bind="visible: !hasImage()">
+			</a>
+			@*<div class="price">
+				</div>*@
+		</div>
+		<!--ring Image-->
+		<!--ring Detail-->
+		<div class="goal-detail">
+
+			@*<div class="days-strength">
+					<div class="row">
+
+						<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+							<span><i class="fa fa-clock-o"></i></span><p>7 Days</p>
+						</div>
+
+						<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+							<span><i class="fa fa-users"></i></span><p>25</p>
+						</div>
+
+					</div>
+				</div>
+
+				<div class="rating">
+					<span><i class="fa fa-star"></i></span>
+					<span><i class="fa fa-star"></i></span>
+					<span><i class="fa fa-star"></i></span>
+					<span><i class="fa fa-star"></i></span>
+				</div>*@
+
+			<p data-bind="text: description()"></p>
+			@*<h4 class="instructor-name"><span><i class="fa fa-graduation-cap"></i></span>What goes here?</h4>*@
+		</div>
+		<!--ring Detail-->
+
+	</div>
+</script>

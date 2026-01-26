@@ -1,0 +1,271 @@
+{
+	"version": "1.0",
+	"defaultProvider": "cdnjs",
+	"libraries": [
+		{
+			"library": "require.js@2.3.6",
+			"destination": "wwwroot/lib/requireJs/"
+		},
+		{
+			"library": "knockout@3.5.1",
+			"destination": "wwwroot/lib/knockout/"
+		},
+		{
+			"library": "knockout-sortable@1.1.1",
+			"destination": "wwwroot/lib/knockout-sortable/"
+		},
+		{
+			"library": "knockout.mapping@2.4.1",
+			"destination": "wwwroot/lib/knockout.mapping/"
+		},
+		{
+			"library": "knockout-validation@2.0.3",
+			"destination": "wwwroot/lib/knockout-validation/",
+			"files": [
+				"knockout.validation.min.js",
+				"localization/ar-JO.js",
+				"localization/bg-BG.js",
+				"localization/ca-ES.js",
+				"localization/cs-CZ.js",
+				"localization/da-DK.js",
+				"localization/de-DE.js",
+				"localization/el-GR.js",
+				"localization/en-US.js",
+				"localization/es-ES.js",
+				"localization/fa-IR.js",
+				"localization/fr-FR.js",
+				"localization/he-IL.js",
+				"localization/hr-HR.js",
+				"localization/hu-HU.js",
+				"localization/it-IT.js",
+				"localization/ja-JP.js",
+				"localization/ko-KR.js",
+				"localization/lv-LV.js",
+				"localization/nb-NO.js",
+				"localization/nl-BE.js",
+				"localization/nl-NL.js",
+				"localization/pl-PL.js",
+				"localization/pt-BR.js",
+				"localization/pt-PT.js",
+				"localization/ro-RO.js",
+				"localization/ru-RU.js",
+				"localization/sv-SE.js",
+				"localization/tr-TR.js",
+				"localization/zh-CN.js",
+				"localization/zh-TW.js",
+				"knockout.validation.js"
+			]
+		},
+		{
+			"library": "jquery.form@4.2.2",
+			"destination": "wwwroot/lib/jquery.form/"
+		},
+		{
+			"library": "html5shiv@3.7.3",
+			"destination": "wwwroot/lib/html5shiv/",
+			"files": [
+				"html5shiv.min.js"
+			]
+		},
+		{
+			"library": "jqueryui@1.12.1",
+			"destination": "wwwroot/lib/jqueryui/",
+			"files": [
+				"jquery-ui.min.js",
+				"themes/base/jquery-ui.css",
+				"themes/base/jquery-ui.min.css",
+				"themes/base/theme.css",
+				"themes/base/theme.min.css",
+				"themes/base/images/ui-icons_444444_256x240.png",
+				"themes/base/images/ui-icons_555555_256x240.png",
+				"themes/base/images/ui-icons_777620_256x240.png",
+				"themes/base/images/ui-icons_777777_256x240.png",
+				"themes/base/images/ui-icons_cc0000_256x240.png",
+				"themes/base/images/ui-icons_ffffff_256x240.png"
+			]
+		},
+		{
+			"library": "popper.js@1.15.0",
+			"destination": "wwwroot/lib/popper.js/",
+			"files": [
+				"popper.min.js"
+			]
+		},
+		{
+			"library": "respond.js@1.4.2",
+			"destination": "wwwroot/lib/respond.js/",
+			"files": [
+				"respond.min.js"
+			]
+		},
+		{
+			"library": "modernizr@2.8.3",
+			"destination": "wwwroot/lib/modernizr/",
+			"files": [
+				"modernizr.min.js"
+			]
+		},
+		{
+			"library": "sammy.js@0.7.6",
+			"destination": "wwwroot/lib/sammy.js/",
+			"files": [
+				"sammy.min.js"
+			]
+		},
+		{
+			"library": "moment.js@2.24.0",
+			"destination": "wwwroot/lib/moment.js/",
+			"files": [
+				"moment.min.js",
+				"moment-with-locales.min.js"
+			]
+		},
+		{
+			"library": "jquery-validation-unobtrusive@3.2.11",
+			"destination": "wwwroot/lib/jquery-validation-unobtrusive/",
+			"files": [
+				"jquery.validate.unobtrusive.min.js"
+			]
+		},
+		{
+			"library": "jquery-validate@1.19.1",
+			"destination": "wwwroot/lib/jquery-validate/",
+			"files": [
+				"jquery.validate.min.js",
+				"localization/messages_es.min.js"
+			]
+		},
+		{
+			"library": "jquery@3.4.1",
+			"destination": "wwwroot/lib/jquery/",
+			"files": [
+				"jquery.min.js",
+				"jquery.slim.min.js"
+			]
+		},
+		{
+			"library": "jquery-migrate@3.1.0",
+			"destination": "wwwroot/lib/jquery-migrate/",
+			"files": [
+				"jquery-migrate.min.js"
+			]
+		},
+		{
+			"library": "jquery-mobile@1.4.5",
+			"destination": "wwwroot/lib/jquery-mobile/",
+			"files": [
+				"jquery.mobile.min.js",
+				"jquery.mobile.min.css"
+			]
+		},
+		{
+			"library": "prettyPhoto@3.1.6",
+			"destination": "wwwroot/lib/prettyPhoto/",
+			"files": [
+				"js/jquery.prettyPhoto.min.js",
+				"images/prettyPhoto/dark_rounded/btnNext.png",
+				"images/prettyPhoto/dark_rounded/btnPrevious.png",
+				"images/prettyPhoto/dark_rounded/contentPattern.png",
+				"images/prettyPhoto/dark_rounded/default_thumbnail.gif",
+				"images/prettyPhoto/dark_rounded/loader.gif",
+				"images/prettyPhoto/dark_rounded/sprite.png",
+				"images/prettyPhoto/dark_square/btnNext.png",
+				"images/prettyPhoto/dark_square/btnPrevious.png",
+				"images/prettyPhoto/dark_square/contentPattern.png",
+				"images/prettyPhoto/dark_square/default_thumbnail.gif",
+				"images/prettyPhoto/dark_square/loader.gif",
+				"images/prettyPhoto/dark_square/sprite.png",
+				"images/prettyPhoto/default/default_thumb.png",
+				"images/prettyPhoto/default/loader.gif",
+				"images/prettyPhoto/default/sprite.png",
+				"images/prettyPhoto/default/sprite_next.png",
+				"images/prettyPhoto/default/sprite_prev.png",
+				"images/prettyPhoto/default/sprite_x.png",
+				"images/prettyPhoto/default/sprite_y.png",
+				"images/prettyPhoto/facebook/btnNext.png",
+				"images/prettyPhoto/facebook/btnPrevious.png",
+				"images/prettyPhoto/facebook/contentPatternBottom.png",
+				"images/prettyPhoto/facebook/contentPatternLeft.png",
+				"images/prettyPhoto/facebook/contentPatternRight.png",
+				"images/prettyPhoto/facebook/contentPatternTop.png",
+				"images/prettyPhoto/facebook/default_thumbnail.gif",
+				"images/prettyPhoto/facebook/loader.gif",
+				"images/prettyPhoto/facebook/sprite.png",
+				"images/prettyPhoto/light_rounded/btnNext.png",
+				"images/prettyPhoto/light_rounded/btnPrevious.png",
+				"images/prettyPhoto/light_rounded/default_thumbnail.gif",
+				"images/prettyPhoto/light_rounded/loader.gif",
+				"images/prettyPhoto/light_rounded/sprite.png",
+				"images/prettyPhoto/light_square/btnNext.png",
+				"images/prettyPhoto/light_square/btnPrevious.png",
+				"images/prettyPhoto/light_square/default_thumbnail.gif",
+				"images/prettyPhoto/light_square/loader.gif",
+				"images/prettyPhoto/light_square/sprite.png",
+				"css/prettyPhoto.min.css"
+			]
+		},
+		{
+			"library": "font-awesome@5.12.1",
+			"destination": "wwwroot/lib/font-awesome/",
+			"files": [
+				"css/all.min.css",
+				"webfonts/fa-brands-400.eot",
+				"webfonts/fa-brands-400.svg",
+				"webfonts/fa-brands-400.ttf",
+				"webfonts/fa-brands-400.woff",
+				"webfonts/fa-brands-400.woff2",
+				"webfonts/fa-regular-400.eot",
+				"webfonts/fa-regular-400.svg",
+				"webfonts/fa-regular-400.ttf",
+				"webfonts/fa-regular-400.woff",
+				"webfonts/fa-regular-400.woff2",
+				"webfonts/fa-solid-900.eot",
+				"webfonts/fa-solid-900.svg",
+				"webfonts/fa-solid-900.ttf",
+				"webfonts/fa-solid-900.woff",
+				"webfonts/fa-solid-900.woff2"
+			]
+		},
+		{
+			"library": "bootstrap-social@5.1.1",
+			"destination": "wwwroot/lib/bootstrap-social/",
+			"files": [
+				"bootstrap-social.min.css"
+			]
+		},
+		{
+			"library": "twitter-bootstrap@3.3.7",
+			"destination": "wwwroot/lib/twitter-bootstrap/",
+			"files": [
+				"js/bootstrap.min.js",
+				"css/bootstrap-theme.min.css",
+				"css/bootstrap.min.css",
+				"fonts/glyphicons-halflings-regular.eot",
+				"fonts/glyphicons-halflings-regular.svg",
+				"fonts/glyphicons-halflings-regular.ttf",
+				"fonts/glyphicons-halflings-regular.woff",
+				"fonts/glyphicons-halflings-regular.woff2"
+			]
+		},
+		{
+			"library": "gridstack.js@0.4.0",
+			"destination": "wwwroot/lib/gridstack.js/",
+			"files": [
+				"gridstack.min.js",
+				"gridstack.min.css"
+			]
+		},
+		{
+			"library": "oidc-client@1.10.1",
+			"destination": "wwwroot/lib/oidc-client",
+			"files": [
+				"oidc-client.min.js",
+				"oidc-client.js"
+			]
+		}
+		//,
+		//{
+		// "library": "bootstrap alert"
+		//}
+	]
+}

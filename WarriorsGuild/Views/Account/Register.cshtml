@@ -1,0 +1,73 @@
+﻿@model WarriorsGuild.Models.Account.RegisterViewModel
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+	ViewBag.Title = "Register";
+}
+
+@using WarriorsGuild.Utilities
+
+<section>
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12 text-center">
+				<h2>Register</h2>
+				@if (!User.Identity.IsAuthenticated)
+				{
+					<h4>Enter your Guardian information below</h4>
+					<h5>(You will be able to add your warrior(s) once you are logged in)</h5>
+				}
+				<hr />
+			</div>
+		</div>
+		<div class="row">
+			@using (Html.BeginForm("Register", "Account", FormMethod.Post, new { @class = "form-horizontal container", role = "form" }))
+			{
+				@Html.AntiForgeryToken()
+				@await Html.PartialAsync("_RegistrationPartial", Model)
+			}
+		</div>
+	</div>
+</section>
+@section Scripts {
+	<script src="@Url.ContentVersioned("/bundles/jqueryval.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/registration.js")" defer></script>
+	<script type="text/javascript" defer>
+		jQuery.LiveAddress( {
+				key: '@Configuration[ "SmartyStreetsKey" ]',
+				debug: false,
+				target: "US",
+				addresses: [{
+						id: 'mailing',		// IDs are not part of the address
+						address1: '#AddressLine1',
+						address2: '#AddressLine2',	// Not all these fields are required
+						locality: '#City',
+						administrative_area: '#State',
+						postal_code: '#PostalCode'/*,
+						country: '#Country'*/
+				}]
+		} );
+		$( '#Email' )
+			.change( function () {
+				if ( $( '#KeepUsernameInSyncWithEmailAddress' ).prop( 'checked' ) ) {
+					var tbUserName = $( '#UserName' );
+					//if ( tbUserName.val() === $( this ).data( 'oldVal' ) ) {
+						tbUserName.val( $( this ).val() );
+					//}
+				}
+			} )
+			.focus( function () {
+				$( this ).data( 'oldVal', $( this ).val() );
+			} );
+		$( '#KeepUsernameInSyncWithEmailAddress' )
+			.change( function () {
+				$( '#UserName' ).prop( "readonly", $( this ).prop( 'checked' ) )
+				if ( $( this ).prop( 'checked' ) ) {
+					$( '#UserName' ).val( $( '#Email' ).val() );
+				}
+			} );
+		$( '#KeepUsernameInSyncWithEmailAddress' ).prop( 'checked', @((!User.Identity.IsAuthenticated).ToString().ToLower()) );
+		$( '#UserName' ).prop( 'readonly', @((!User.Identity.IsAuthenticated).ToString().ToLower()) );
+	</script>
+}

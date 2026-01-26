@@ -1,0 +1,360 @@
+﻿@{
+	ViewBag.Title = "Dashboard | Warriors Guild";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+	var UserIsAdmin = User.IsInRole("Admin");
+	var UserIsAdminString = UserIsAdmin.ToString().ToLower();
+	var warriorIndex = 0;
+}
+@using WarriorsGuild.Utilities
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Philosopher&display=swap" rel="stylesheet">
+
+<!-- ko with: dashboard -->
+<section class="guardian dashboard">
+	<div class="row">
+		<div class="col-sm-6">
+			<div class="row">
+				<div class="col-xs-10 photo-and-rank" style="margin-top:40px">
+					<div class="user-photo">
+						<!-- ko if: dataModel.guardian.HasAvatar() -->
+						<img data-bind="attr: { src: '/api/Profile/' + dataModel.guardian.id() + '/Avatar' }" style="margin-top: -50px; width: 160px; height: 160px; border-radius: 50%">
+						<!-- /ko -->
+						<!-- ko if: !dataModel.guardian.HasAvatar() -->
+						<span data-bind="text: dataModel.guardian.username()"></span>
+						<!-- /ko -->
+					</div>
+					<div class="current-rank">
+						<h4>GUARDIAN</h4>
+						<div class="imgDiv">
+							<img alt="goal-image" style="display:block;" src="~/images/guardian_small.png" />
+						</div>
+						<h4 data-bind="text: dataModel.guardian.name()">Guardian Name</h4>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-4 col-md-6">
+			<div class="row">
+				<div class="col-xs-12">
+					<div>CURRENT SUBSCRIPTION:<span data-bind="text: dataModel.guardian.subscriptionDesc()" style="padding-left: 10px"></span></div>
+					<div>SUBSCRIPTION EXPIRATION:<span data-bind="text: moment(dataModel.guardian.subscriptionExp()).format('MMMM Do, YYYY')" style="padding-left: 10px"></span></div>
+				</div>
+			</div>
+			<div class="row">
+				@*<div class="ring-cross-status clearfix col-xs-7 col-md-4">
+					<div>
+						<div style="width: 100%; height: 100%; position: absolute; z-index: 1000; font-size: 25px; transform: rotate(15deg); top: 90px; left: 200px; line-height: 1; font-family: 'Philosopher', sans-serif; /* Safari */ -webkit-transform: rotate(15deg); /* Firefox */ -moz-transform: rotate(15deg); /* IE */ -ms-transform: rotate(15deg); /* Opera */ -o-transform: rotate(15deg);">
+							Coming<br /> Soon
+						</div>
+						<h4 class="ring-status hidden-xs visible-lg-inline-block" style="width:140px; text-align: right;">RINGS EARNED:</h4>
+						<div class="ring-status platinum_ring">
+							<partial name="~/Views/Shared/_CompletedItemListPopup.cshtml" model='new WarriorsGuild.Models.CompletedItemListPopupModel("platinumRingPopup","dataModel.guardian.CompletedPlatinumRings()", "id", "dataModel.guardian.")' />
+						</div>
+					</div>
+				</div>*@
+				<div class="col-md-4 pinned-rings">
+					<div data-bind="foreach: dataModel.PinnedRings(), visible: !RetrievingPinnedRings()" style="display:none;">
+						<div class="row">
+							<div class="col-xs-2 header">
+								<div>
+									<a href="#" data-bind="attr: { href: '/rings#detail?id=' + ringId}"><img data-bind="attr:{ src: imgSrcAttr, title: name }" alt="goal-image" /></a>
+								</div>
+							</div>
+							<div class="col-xs-7 title">
+								<h4>RING</h4>
+								<a href="#" data-bind="attr: { href: '/rings#detail?id=' + ringId}"><h4 data-bind="text: name, attr:{ title: name }"></h4></a>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-xs-9">
+								<div class="wg-progressbar"><div data-bind="style: { width: percentCompleted + '%' }"></div></div>
+								<div><span data-bind="text: percentCompleted"></span>% complete</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				</div>
+			</div>
+	</div>
+	<hr />
+	<div class="container-fluid">
+		<!-- ko if: dataModel.Warriors().length == 0 -->
+		<div class="row">
+			<div class="col-xs-12">
+				<div class="row">
+					<div class="col-xs-12">
+						<h1>You have no Warriors to track.  Go to Account -> Warrior(s) to add a Warrior.</h1>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- /ko -->
+
+		<!-- ko foreach: dataModel.Warriors-->
+			<div class="row">
+				<div class="col-sm-12 col-md-offset-3 col-md-6">
+					<!-- ko with: CompletedRank() -->
+						<a href="#" data-bind="attr: { href: '/Profile/' + $parent.id }" title="Click to see full profile">
+							<div class="col-xs-10 photo-and-rank">
+								<div class="user-photo">
+									<!-- ko if: $parent.HasAvatar -->
+									<img data-bind="attr: { src: '/api/Profile/' + $parent.id + '/Avatar' }" style="margin-top: -50px; width: 160px; height: 160px; border-radius: 50%">
+									<!-- /ko -->
+									<!-- ko if: !$parent.HasAvatar -->
+									<span data-bind="text: $parent.username"></span>
+									<!-- /ko -->
+								</div>
+								<div class="current-rank">
+									<h4 data-bind="text: name() || 'Unranked'">Rank</h4>
+									<div class="imgDiv">
+										<img data-bind="attr:{ src: imgSrcAttr(), title: description() }" alt="goal-image" style="display:block;" src="/images/logo/Warriors-Guild-icon-sm.png" />
+									</div>
+									<h4 data-bind="text: $parent.name">Warrior Name</h4>
+								</div>
+								<div class="sub-ranks">
+									<div>
+										<img title="Apprentice" alt="Apprentice" data-bind="attr: { src: percentComplete() >= 33 ? '/images/apprentice01.png' : '/images/gray01.png', alt: 'Apprentice' + (percentComplete() == 100 ? '' : ' - Not Achieved') }" src="/images/gray01.png" />
+										<img title="Journeyman" alt="Journeyman" data-bind="attr: { src: percentComplete() >= 66 ? '/images/journeyman01.png' : '/images/gray01.png', alt: 'Journeyman' + (percentComplete() == 100 ? '' : ' - Not Achieved') }" src="/images/gray01.png" />
+										<img title="Master" alt="Master" data-bind="attr: { src: percentComplete() === 100 ? '/images/master01.png' : '/images/gray01.png', alt: 'Master' + (percentComplete() == 100 ? '' : ' - Not Achieved') }" src="/images/gray01.png" />
+									</div>
+								</div>
+							</div>
+						</a>
+					<!-- /ko -->
+				</div>
+				@*<div class="col-xs-12 col-sm-6 col-md-7 col-lg-8">
+					<div class="row">
+						<div class="ring-cross-status clearfix">
+							<div class="col-xs-9 col-md-8">
+								<h4 class="ring-status hidden-xs visible-lg-inline-block" style="width:140px; text-align: right;">WARRIOR RINGS EARNED:</h4>
+								<div class="ring-status silver_ring">
+									<partial name="~/Views/Shared/_CompletedItemListPopup.cshtml" model='new WarriorsGuild.Models.CompletedItemListPopupModel("silverRingPopup","CompletedSilverRings()", "id", "$parent.")' />
+								</div>
+								<div class="ring-status gold_ring">
+									<partial name="~/Views/Shared/_CompletedItemListPopup.cshtml" model='new WarriorsGuild.Models.CompletedItemListPopupModel("goldRingPopup","CompletedGoldRings()", "id", "$parent.")' />
+								</div>
+								<div class="ring-status platinum_ring">
+									<partial name="~/Views/Shared/_CompletedItemListPopup.cshtml" model='new WarriorsGuild.Models.CompletedItemListPopupModel("platinumRingPopup","CompletedPlatinumRings()", "id", "$parent.")' />
+								</div>
+
+							</div>
+							<div class="col-xs-3 col-md-4">
+								<h4 class="cross-status hidden-xs visible-lg-inline-block">CROSSES EARNED:</h4>
+								<div class="cross-status cross">
+									<partial name="~/Views/Shared/_CompletedItemListPopup.cshtml" model='new WarriorsGuild.Models.CompletedItemListPopupModel("completedCrossPopup","CompletedCrosses()","id", "$parent.")' />
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>*@
+			</div>
+			<div class="row">
+				<div class="col-xs-12 col-md-offset-3 col-md-6" data-bind="visible: !RetrievingPendingApproval()" style="display:none;">
+					<!-- ko if: PendingRankApproval() === null -->
+					<div class="row"><div class="col-xs-12"><h3>No pending Rank approval</h3></div></div>
+					<!-- /ko -->
+					<!-- ko with: PendingRankApproval() -->
+					<div class="row">
+						<div class="col-xs-12">
+							<div class="row working-rank">
+								<div class="col-xs-7 header">
+									<div>
+										<img data-bind="attr:{ src: imgSrcAttr }" alt="goal-image">
+									</div>
+									<div>
+										<h4 data-bind="text: name"></h4>
+										<h4>Awaiting Promotion to <span style="font-weight: bold" data-bind="text: pendingSubRank"></span></h4>
+									</div>
+								</div>
+								<div class="col-xs-5">
+									<div class="wg-progressbar rank"><div data-bind="style: { width: percentComplete + '%' }"></div></div>
+									<div><span data-bind="text: percentComplete"></span>% complete</div>
+								</div>
+							</div>
+							<div class="row" data-bind="visible: percentComplete == 100">
+								<h2 class="col-xs-12">It's time for a Round Table!!</h2>
+							</div>
+							<div class="row" data-bind="foreach: unconfirmedRequirements">
+								<div class="col-xs-12 text-left col-requirement">
+									<div class="check">
+										<div class="squaredThree">
+											<div data-bind="attr: { id: 'rq' + $index(), checked: true }"></div>
+											<label data-bind="attr: { for: 'rq' + $index() }"></label>
+										</div>
+									</div>
+									<span class="actionToComplete" data-bind="html: actionToCompleteLinked"></span>
+								</div>
+								<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8" data-bind="visible: requireRing">
+									<div class="rankAdditionalRingRequirements">
+										<label>Rings:</label>
+										<!-- ko foreach: savedRings -->
+										<img style="height:40px" data-bind="attr: { src: imgSrcAttr, alt: name, title: name }" />
+										<!-- /ko -->
+									</div>
+								</div>
+								<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8" data-bind="visible: requireCross">
+									<div class="rankAdditionalRingRequirements">
+										<label>Crosses:</label>
+										<!-- ko foreach: savedCrosses -->
+											<cross params="{cross: $data, userIsWarrior: false }" class="center" />
+										<!-- /ko -->
+									</div>
+								</div>
+								<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8" data-bind="visible: requireAttachment">
+									<div class="rankAdditionalRingRequirements">
+										<label>Attachments:</label>
+										<!-- ko foreach: attachments -->
+										<a data-bind="click: $parents[3].downloadProofOfCompletionFile" style="cursor: pointer" class="btn btn-sm btn-info">
+											<span data-bind="text:$index() + 1"></span>
+										</a>
+										<!-- /ko -->
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-xs-12 text-center">
+									<span data-bind="text:$parent.percentComplete"></span>
+									<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parents[1].promoteWarrior( approvalRecordId, $parent ); }, text: percentComplete < 100 ? 'Promote' : 'Complete Round Table and Promote'">Promote</button>
+									<button class="btn btn-sm btn-danger" data-bind="click: function(data) { $parents[1].beginReturn( approvalRecordId, $parent ); }">Return to Warrior</button>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!-- /ko -->
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-offset-3 col-md-6 pinned-rings" data-bind="visible: !RetrievingPinnedRings()" style="display:none;">
+					<div data-bind="foreach: PendingRingApprovals">
+						<div class="row">
+							<div class="col-xs-2 header">
+								<div>
+									<a href="#" data-bind="attr: { href: '/rings#detail?id=' + ringId}, click: $parents[2].SetWarriorProfile.bind($data, $parent)"><img data-bind="attr:{ src: imgSrcAttr, title: ringName }" alt="goal-image" /></a>
+								</div>
+							</div>
+							<div class="col-xs-7 title">
+								<h4>WARRIOR RING</h4>
+								<a href="#" data-bind="attr: { href: '/rings#detail?id=' + ringId}, click: $parents[2].SetWarriorProfile.bind($data, $parent)"><h4 data-bind="text: ringName, attr:{ title: ringName }"></h4></a>
+							</div>
+						</div>
+						@*<div class="row hidden">
+							<div class="col-xs-9">
+								<div class="wg-progressbar"><div data-bind="style: { width: percentComplete + '%' }"></div></div>
+								<div><span data-bind="text: percentComplete"></span>% COMPLETE</div>
+							</div>
+						</div>*@
+					</div>
+					<div data-bind="foreach: PendingCrossApprovals">
+						<div class="row">
+							<div class="col-xs-2 header">
+								<div>
+									<a href="#" data-bind="attr: { href: '/crosses#detail?id=' + crossId}, click: $parents[2].SetWarriorProfile.bind($data, $parent)"><img data-bind="attr:{ src: imgSrcAttr, title: crossName }" alt="goal-image" /></a>
+								</div>
+							</div>
+							<div class="col-xs-7 title">
+								@*<h4>CROSS</h4>*@
+								<a href="#" data-bind="attr: { href: '/crosses#detail?id=' + crossId}, click: $parents[2].SetWarriorProfile.bind($data, $parent)"><h4 data-bind="text: crossName, attr:{ title: crossName }"></h4></a>
+							</div>
+						</div>
+						@*<div class="row hidden">
+							<div class="col-xs-9">
+								<div class="wg-progressbar"><div data-bind="style: { width: percentComplete + '%' }"></div></div>
+								<div><span data-bind="text: percentComplete"></span>% COMPLETE</div>
+							</div>
+						</div>*@
+					</div>
+				</div>
+			</div>
+			<!-- ko with: WorkingRank() -->
+			<div class="row" data-bind="visible: !$parent.RetrievingRank()" style="display:none;">
+				<div class="col-xs-12 col-md-offset-3 col-md-6">
+					<div class="row working-rank">
+						<div class="col-xs-7 header">
+							<div>
+								<img data-bind="attr:{ src: imgSrcAttr(), title: description() }" src="~/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image">
+							</div>
+							<div>
+								<h4>REQUIREMENTS</h4>
+								<h4 data-bind="text: name(), attr:{ title: description() }"></h4>
+							</div>
+						</div>
+					</div>
+					<div class="row" data-bind="foreach: requirements().filter(r => r.initiatedByGuardian())">
+						<!-- ko if: visible() -->
+						<div class="col-xs-12 text-left col-requirement">
+							<div class="check">
+								<div class="squaredThree" data-bind="css: { completed: guardianReviewed() }">
+									<!-- ko if: !requireAttachment() || warriorCompleted() -->
+									<input type="checkbox" data-bind="enable: !guardianReviewed() && !$parent.pendingApproval(),
+															attr: { id: 'rq' + $index(), alt: completionSummaryText(), css: { completed: guardianReviewed() } },
+															checked: warriorCompleted(),
+															click: !warriorCompleted() ? markAsComplete : (!guardianReviewed() && !$parent.pendingApproval()) ? revertCompletion : function() {}" />
+									<!-- /ko -->
+									<!-- ko if: requireAttachment() && !warriorCompleted() -->
+									<input type="checkbox" data-bind="enable: !guardianReviewed() && !$parent.pendingApproval(),
+															attr: { id: 'rq' + $index(), alt: completionSummaryText(), css: { completed: guardianReviewed() } },
+															checked: warriorCompleted()" />
+									<!-- /ko -->
+									<label data-bind="attr: { for: 'rq' + $index(), title: completionSummaryText() }"></label>
+
+									<!-- ko if: requireAttachment() && !warriorCompleted() -->
+									<form data-bind="imageUploader: { key: 'POC' + id,
+												id: id,
+												postUrl: warriorDashboardViewModel.proofOfCompletionUrl,
+												fileClass: 'pdf',
+												maxSize: 5000000,
+												successCallBack: function(respData) { $data.addAttachment(respData); $data.warriorCompletedTs(new Date()); } }, uniqueName: true" action="" method="post" enctype="multipart/form-data">
+										<input type="hidden" data-bind="attr: { name: 'reqId' + $index() }, textInput: id" />
+										<input type="hidden" data-bind="attr: { name: 'rankId' + $index() }, textInput: $parent.id" />
+										<input type="file" data-bind="uniqueName: true" multiple />
+									</form>
+									<!-- /ko -->
+								</div>
+							</div>
+							<span class="actionToComplete" data-bind="html: `${actionToCompleteLinked()}${optional() ? ' (Optional)' : ''}`"></span>
+							<div style="width:100%; height: 100%; opacity:.5"></div>
+						</div>
+						<!-- /ko -->
+					</div>
+				</div>
+				<div class="ui-widget-overlay ui-front hidden" style="z-index: 100;"></div>
+			</div>
+			<!-- /ko -->
+		<!-- /ko -->
+	</div>
+</section>
+<partial name="~/Views/Ranks/ReturnReasonDialog.cshtml" />
+<!-- /ko -->
+
+<script>
+	var guardianDashboardViewModel = @Html.Raw( Newtonsoft.Json.JsonConvert.SerializeObject(new
+								{
+									BlogUrl = "https://public-api.wordpress.com/rest/v1.1/sites/warriorsguild.blog/posts/?number=2",
+									WarriorListUrl = "/api/guardian/warriors",
+									RanksByUserUrl = "/api/ranks/byuser/",
+									RingsByUserUrl = "/api/rings/byuser/",
+									CrossesByUserUrl = "/api/crosses/byuser/",
+									RankPendingApprovalUrl = "/api/RankStatus/pendingapproval/",
+									RingsPendingApprovalUrl = "/api/RingStatus/pendingapprovals/",
+									CrossesPendingApprovalUrl = "/api/Crossstatus/pendingapprovals/",
+									RanksUrl = "/api/ranks/",
+									RankStatusUrl = "/api/rankStatus",
+									RankApprovalUrl = "/api/rankstatus/approveprogress",
+									ProofOfCompletionUrl = "/api/rankstatus/proofOfCompletion"
+								},
+	new Newtonsoft.Json.JsonSerializerSettings
+	{
+		ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
+	} ) );
+</script>
+
+
+@section Styles {
+	<link href="@Url.ContentVersioned("~/bundles/jquery-ui.css")" rel="stylesheet" />
+}
+@section Scripts {
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/guardianDashboard.js")" defer></script>
+}

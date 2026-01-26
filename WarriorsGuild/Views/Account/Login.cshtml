@@ -1,0 +1,131 @@
+﻿@model WarriorsGuild.Areas.Account.Models.LoginViewModel
+@{
+	ViewBag.Title = "Log in";
+}
+@using WarriorsGuild.Utilities
+
+<section>
+	<div class="container">
+		<div id="fb-root"></div>
+		<script>
+			(function (d, s, id) {
+				var js, fjs = d.getElementsByTagName(s)[0];
+				if (d.getElementById(id)) return;
+				js = d.createElement(s); js.id = id;
+				js.src = 'https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v3.2&appId=490954708088437&autoLogAppEvents=1';
+				fjs.parentNode.insertBefore(js, fjs);
+			}(document, 'script', 'facebook-jssdk'));
+		</script>
+		<h2>@ViewBag.Title</h2>
+		<div class="row">
+			@if (Model.EnableLocalLogin)
+			{
+				<div class="col-md-8">
+					<section id="loginForm">
+						@using (Html.BeginForm("Login", "Account", new { ReturnUrl = ViewBag.ReturnUrl }, FormMethod.Post, true, new { @class = "form-horizontal", role = "form" }))
+						{
+							@Html.AntiForgeryToken()
+							<h4>Use a local account to log in.</h4>
+							<hr />
+							if (ViewData.ModelState.Values.Any(v => v.Errors.Any()))
+							{
+								<ul class="alert alert-danger">
+									@foreach (var modelState in ViewData.ModelState.Values)
+									{
+										foreach (var error in modelState.Errors)
+										{
+											<li>@error.ErrorMessage</li>
+										}
+									}
+								</ul>
+							}
+							<div class="form-group">
+								@Html.LabelFor(m => m.Username, new { @class = "col-md-2 control-label" })
+								<div class="col-md-10">
+									@Html.TextBoxFor(m => m.Username, new { @class = "form-control" })
+									@Html.ValidationMessageFor(m => m.Username, "", new { @class = "text-danger" })
+								</div>
+							</div>
+							<div class="form-group">
+								@Html.LabelFor(m => m.Password, new { @class = "col-md-2 control-label" })
+								<div class="col-md-10">
+									@Html.PasswordFor(m => m.Password, new { @class = "form-control" })
+									@Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="col-md-offset-2 col-md-10">
+									<div class="checkbox">
+										<label>
+											@Html.CheckBoxFor(m => m.RememberLogin)
+											@Html.DisplayNameFor(m => m.RememberLogin)
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="col-md-offset-2 col-md-10">
+									<input type="submit" value="Log in" class="btn btn-default" />
+								</div>
+							</div>
+							<p>
+								@Html.ActionLink("Register as a new user", "Register")
+							</p>
+							<p>
+								@Html.ActionLink("Forgot your username?", "ForgotUserName")
+							</p>
+							<p>
+								@Html.ActionLink("Forgot your password?", "ForgotPassword")
+							</p>
+						}
+					</section>
+				</div>
+			}
+			@if (Model.VisibleExternalProviders.Any())
+			{
+				<div class="col-md-4">
+					<section id="socialLoginForm">
+						<partial name="_ExternalLoginsListPartial" model="@new WarriorsGuild.Models.Account.ExternalLoginListViewModel { ReturnUrl = ViewBag.ReturnUrl }" />
+					</section>
+				</div>
+			}
+			@*<div class="col-md-4">
+					<section id="socialLoginForm">
+						<div class="card">
+							<div class="card-header">
+								<h2>External Account</h2>
+							</div>
+							<div class="card-body">
+								<ul class="list-inline">
+									@foreach (var provider in Model.VisibleExternalProviders)
+									{
+										<li class="list-inline-item">
+											<a class="btn btn-secondary"
+											   asp-controller="External"
+											   asp-action="Challenge"
+											   asp-route-scheme="@provider.AuthenticationScheme"
+											   asp-route-returnUrl="@Model.ReturnUrl">
+												@provider.DisplayName
+											</a>
+										</li>
+									}
+								</ul>
+							</div>
+						</div>
+					</section>
+				</div>*@
+			@if (!Model.EnableLocalLogin && !Model.VisibleExternalProviders.Any())
+			{
+				<div class="alert alert-warning">
+					<strong>Invalid login request</strong>
+					There are no login schemes configured for this request.
+				</div>}
+
+		</div>
+	</div>
+</section>
+
+@section Scripts {
+	<script src="@Url.ContentVersioned("/bundles/jqueryval.js")" defer></script>
+	<script src="https://apis.google.com/js/platform.js" async defer></script>
+}

@@ -1,0 +1,533 @@
+﻿[
+	{
+		"outputFileName": "wwwroot/bundles/home.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/moment.js/moment.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/CustomObservables/CustomObservables.js",
+			"wwwroot/Scripts/app/home.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/intro.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/intro.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/ranks.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/dateConversion.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/ranks.datamodels.js",
+			"wwwroot/Scripts/app/crosses.datamodels.js",
+			"wwwroot/Scripts/app/services/rank.service.js",
+			"wwwroot/Scripts/app/ranks.viewmodel.js",
+			"wwwroot/Scripts/app/components/other/customCheckbox.component.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/rings.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/dateConversion.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/rings.datamodels.js",
+			"wwwroot/Scripts/app/rings.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/crosses.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/dateConversion.js",
+			"wwwroot/Scripts/app/utilities/mapperConfigurations.js",
+			"wwwroot/Scripts/app/services/cross.service.js",
+			"wwwroot/Scripts/app/components/crosses/cross.component.js",
+			"wwwroot/Scripts/app/components/crosses/crossday.component.js",
+			"wwwroot/Scripts/app/components/crosses/crossDayQuestion.component.js",
+			"wwwroot/Scripts/app/components/crosses/crossSummaryQuestions.component.js",
+			"wwwroot/Scripts/app/components/dialogs/requestPromotionDialog.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/crosses.datamodels.js",
+			"wwwroot/Scripts/app/services/cross.service.js",
+			"wwwroot/Scripts/app/crosses.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/profiles.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/ranks.datamodels.js",
+			"wwwroot/Scripts/app/services/rank.service.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/profiles.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/manage.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/admin.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/registration.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js",
+			"wwwroot/scripts/lib/SmartyStreets/liveAddress.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/paymentPlans.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/CustomObservables/CustomObservables.js",
+			"wwwroot/Scripts/app/wg.stripe.js",
+			"wwwroot/Scripts/app/payments.datamodels.js",
+			"wwwroot/Scripts/app/paymentPlans.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/subscriptions.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/CustomObservables/CustomObservables.js",
+			"wwwroot/Scripts/app/payments.datamodels.js",
+			"wwwroot/Scripts/app/wg.stripe.js",
+			"wwwroot/Scripts/app/subscriptions.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/profileEditor.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/CustomObservables/CustomObservables.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/wg.stripe.js",
+			"wwwroot/Scripts/app/profileEditor.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js",
+			"wwwroot/scripts/lib/SmartyStreets/liveAddress.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/warriorDashboard.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/lib/moment.js/moment.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/dateConversion.js",
+			"wwwroot/Scripts/app/utilities/mapperConfigurations.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/ranks.datamodels.js",
+			"wwwroot/Scripts/app/rings.datamodels.js",
+			"wwwroot/Scripts/app/components/dashboard/warrior.header.component.js",
+			"wwwroot/Scripts/app/components/other/completedItemListPopup.component.js",
+			"wwwroot/Scripts/app/crosses.datamodels.js",
+			"wwwroot/Scripts/app/services/cross.service.js",
+			"wwwroot/Scripts/app/services/ring.service.js",
+			"wwwroot/Scripts/app/services/rank.service.js",
+			"wwwroot/Scripts/app/components/crosses/cross.component.js",
+			"wwwroot/Scripts/app/components/crosses/crossday.component.js",
+			"wwwroot/Scripts/app/components/crosses/crossDayQuestion.component.js",
+			"wwwroot/Scripts/app/components/crosses/crossSummaryQuestions.component.js",
+			"wwwroot/Scripts/app/components/dialogs/requestPromotionDialog.js",
+			"wwwroot/Scripts/app/warriorDashboard.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/profile.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/jquery.form/jquery.form.min.js",
+			"wwwroot/lib/moment.js/moment.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/dateConversion.js",
+			"wwwroot/Scripts/app/utilities/mapperConfigurations.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/utilities/imagemanager.js",
+			"wwwroot/Scripts/app/ranks.datamodels.js",
+			"wwwroot/Scripts/app/rings.datamodels.js",
+			"wwwroot/Scripts/app/components/dashboard/warrior.header.component.js",
+			"wwwroot/Scripts/app/components/other/completedItemListPopup.component.js",
+			"wwwroot/Scripts/app/crosses.datamodels.js",
+			"wwwroot/Scripts/app/services/cross.service.js",
+			"wwwroot/Scripts/app/services/ring.service.js",
+			"wwwroot/Scripts/app/services/rank.service.js",
+			"wwwroot/Scripts/app/components/crosses/cross.summary.component.js",
+			"wwwroot/Scripts/app/components/dialogs/requestPromotionDialog.js",
+			"wwwroot/Scripts/app/warriorDashboard.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/guardianDashboard.js",
+		"inputFiles": [
+			"wwwroot/Scripts/main.js",
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/lib/jqueryui/jquery-ui.min.js",
+			"wwwroot/lib/moment.js/moment.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/utilities/dateConversion.js",
+			"wwwroot/Scripts/app/utilities/mapperConfigurations.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/ranks.datamodels.js",
+			"wwwroot/Scripts/app/rings.datamodels.js",
+			"wwwroot/Scripts/app/crosses.datamodels.js",
+			"wwwroot/Scripts/app/services/cross.service.js",
+			"wwwroot/Scripts/app/services/rank.service.js",
+			"wwwroot/Scripts/app/guardianDashboard.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/invite.js",
+		"inputFiles": [
+			"wwwroot/lib/sammy.js/sammy.min.js",
+			"wwwroot/Scripts/app/common.js",
+			"wwwroot/Scripts/app/utilities/baseservice.js",
+			"wwwroot/Scripts/app/app.datamodel.js",
+			"wwwroot/Scripts/app/services/profile.service.js",
+			"wwwroot/Scripts/app/app.viewmodel.js",
+			"wwwroot/Scripts/app/inviteToTrial.viewmodel.js",
+			"wwwroot/Scripts/app/_run.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/bootstrap.js",
+		"inputFiles": [
+			"wwwroot/lib/twitter-bootstrap/js/bootstrap.min.js",
+			"wwwroot/lib/respond.js/respond.min.js",
+			"wwwroot/lib/bootstrapAlert/bootstrapAlert.min.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/jquery-ui.css",
+		"inputFiles": [
+			"wwwroot/lib/jqueryui/themes/base/jquery-ui.css",
+			"wwwroot/lib/jqueryui/themes/base/theme.css"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/bootstrap.css",
+		"inputFiles": [
+			"wwwroot/lib/twitter-bootstrap/css/bootstrap.min.css"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/bootstrapSocial.css",
+		"inputFiles": [
+			"wwwroot/lib/bootstrap-social/bootstrap-social.min.css"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/cssStyles.css",
+		"inputFiles": [
+			"wwwroot/lib/font-awesome/css/all.min.css",
+			"wwwroot/lib/prettyPhoto/css/prettyPhoto.min.css",
+			"wwwroot/css/colors.css",
+			"wwwroot/css/Site.css"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/knockout.js",
+		"inputFiles": [
+			"wwwroot/lib/knockout/knockout-min.js",
+			"wwwroot/lib/knockout.mapping/knockout.mapping.min.js",
+			"wwwroot/lib/knockout-sortable/knockout-sortable.min.js",
+			"wwwroot/lib/knockout-validation/knockout.validation.min.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/jquery.js",
+		"inputFiles": [
+			"wwwroot/lib/jquery/jquery.min.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/jquery-plugins.js",
+		"inputFiles": [
+			"wwwroot/lib/jquery-migrate/jquery-migrate.min.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/jqueryval.js",
+		"inputFiles": [
+			"wwwroot/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js",
+			"wwwroot/lib/jquery-validate/jquery.validate.min.js"
+		],
+		"minify": {
+			"enabled": true,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/oidc.js",
+		"inputFiles": [
+			"wwwroot/lib/oidc-client/oidc-client.min.js",
+			"wwwroot/Scripts/app/Utilities/oidcSettings.js"
+		],
+		"minify": {
+			"enabled": false,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	},
+	{
+		"outputFileName": "wwwroot/bundles/global-header.js",
+		"inputFiles": [
+			"wwwroot/Scripts/app/Utilities/_layout-header.js"
+		],
+		"minify": {
+			"enabled": false,
+			"renameLocals": true
+		},
+		"sourceMap": false
+	}
+]

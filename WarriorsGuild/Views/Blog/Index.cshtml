@@ -1,0 +1,110 @@
+﻿
+@{
+	ViewBag.Title = "Blog | Warriors Guild";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@using WarriorsGuild.Utilities 
+
+@*<link href="~/css/wp-posts.css" rel="stylesheet">*@
+<!-- ko with: blog -->
+<section id="blog-view" class="container">
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="blog-content single et_monarch" data-bind="with: dataModel.BlogEntry">
+				<h4><a href="/blog">< Blog List</a></h4>
+				<header class="post-header"><h1 class="entry-title" data-bind="text: title"></h1></header>
+				<div class="featured-media">
+					<!-- ko with: attachments[Object.keys(attachments)[0]] -->
+					<img data-bind="attr: { width: width, height: height, src: URL }" class="attachment-baskerville-2-post-image size-baskerville-2-post-image wp-post-image" />
+					<!-- /ko -->
+				</div> <!-- /featured-media -->
+				<div class="post-content clear" data-bind="html: content"></div><!--/.post-content-->
+				@*<div id="jp-relatedposts" class="jp-relatedposts" style="display: block;">
+					<h3 class="jp-relatedposts-headline"><em>Related</em></h3>
+					<div class="jp-relatedposts-items jp-relatedposts-items-minimal">
+						<p class="jp-relatedposts-post jp-relatedposts-post0" data-post-id="1548" data-post-format="false">
+							<span class="jp-relatedposts-post-title">
+								<a class="jp-relatedposts-post-a" href="https://gabcmissions.com/2017/10/29/orphan-sunday-2017/" title="Orphan Sunday 2017
+
+			This year we will be hosting Orphan Sunday on Sunday, November 12th. This is a nationally recognized day to bring awareness to orphan care, foster care, and adoption. During that morning we invite you to come through Guest Services to find out more information about what our church is doing…" rel="nofollow" data-origin="2039" data-position="0">Orphan Sunday 2017</a>
+							</span><span class="jp-relatedposts-post-context">In "Support"</span>
+						</p><p class="jp-relatedposts-post jp-relatedposts-post1" data-post-id="2033" data-post-format="false">
+							<span class="jp-relatedposts-post-title">
+								<a class="jp-relatedposts-post-a" href="https://gabcmissions.com/2018/11/02/cantastic-canned-food-drive/" title="Cantastic Canned Food Drive
+
+			Throughout the month of November, we will be doing a canned food drive to benefit our own Helping Hand Ministry. We are encouraging everyone to bring canned foods to your Sunday School Departments each Sunday during the month. We will be having a contest at the end of the month…" rel="nofollow" data-origin="2039" data-position="1">Cantastic Canned Food Drive</a>
+							</span><span class="jp-relatedposts-post-context">In "For The City"</span>
+						</p><p class="jp-relatedposts-post jp-relatedposts-post2" data-post-id="1968" data-post-format="false">
+							<span class="jp-relatedposts-post-title">
+								<a class="jp-relatedposts-post-a" href="https://gabcmissions.com/2018/08/31/honduras-2019/" title="Honduras 2019
+
+			Informational Meeting - September 23 - right after the morning worship service in Room 114 We will once again be taking a crew to Orphanage Emmanuel in Honduras. There are three trip options... February 2-9 February 9-16 February 2-16 The estimated price for the one week trips will be $1400-$1500…" rel="nofollow" data-origin="2039" data-position="2">Honduras 2019</a>
+							</span><span class="jp-relatedposts-post-context">In "Honduras"</span>
+						</p>
+					</div>
+				</div>*@
+				<footer class="post-meta-container clear">
+					<div class="entry-author author-avatar-show">
+						<div class="author-avatar">
+							<img alt="" data-bind="attr: { src: author.avatar_URL }" class="avatar avatar-90 grav-hashed grav-hijack">
+						</div><!-- .author-avatar -->
+
+						<div class="author-heading">
+							<h2 class="author-title">Published by <span class="author-name" data-bind="text: author.name"></span></h2>
+						</div><!-- .author-heading -->
+					</div><!-- .entry-auhtor -->
+
+					<div class="post-meta clear">
+						<time class="post-date updated">
+							<i class="fa fa-clock-o"></i>
+							<span data-bind="text: moment(date).format(' Do MMM YYYY');"></span>
+						</time>
+
+						@*<p class="post-categories"><i class="fa fa-folder-open"></i><a href="https://gabcmissions.com/category/mission-trip/honduras/" rel="category tag">Honduras</a>, <a href="https://gabcmissions.com/category/for-the-city/river-valley-pregnancy-medical-center/" rel="category tag">River Valley Pregnancy Medical Center</a>, <a href="https://gabcmissions.com/category/support/" rel="category tag">Support</a></p>
+
+					<p class="post-tags"><i class="fa fa-tag"></i><a href="https://gabcmissions.com/tag/adoption/" rel="tag">adoption</a>, <a href="https://gabcmissions.com/tag/featured/" rel="tag">featured</a>, <a href="https://gabcmissions.com/tag/foster-care/" rel="tag">Foster Care</a>, <a href="https://gabcmissions.com/tag/orphan-care/" rel="tag">orphan care</a>, <a href="https://gabcmissions.com/tag/orphan-sunday/" rel="tag">Orphan Sunday</a></p>*@
+
+					</div>
+				</footer>
+			</div>
+			<div class="et_pb_section et_pb_section_0 et_pb_with_background et_section_regular">
+				<div class="et_pb_row et_pb_row_0">
+					<div class="et_pb_column et_pb_column_4_4 et_pb_column_0  et_pb_css_mix_blend_mode_passthrough et-last-child">
+						<div class="et_pb_module et_pb_image et_pb_image_0"> <span class="et_pb_image_wrap "><img src="~/images/blog/header_wg_blog_01.png.webp" alt="" title="" /></span></div>
+					</div>
+				</div>
+			</div>
+			<div class="blog" data-bind="foreach: dataModel.BlogEntries">
+				<div class="blog-item clearfix">
+					<div class="img-blog-thumbnail col-sm-2">
+						<img data-bind="attr: { src: featured_image + '?w=165&h=165&crop=1', alt: '' }" />
+					</div>
+					<div class="blog-content col-sm-10">
+						<a data-bind="attr: { href: '/blog/' + ID }"><h3 data-bind="html: title"></h3></a>
+						<div class="entry-meta">
+							<span><i class="icon-user"></i> <a href="#" data-bind="text: author.name"></a></span>
+							<span><i class="icon-folder-close"></i> <a href="#" data-bind="text: categories[Object.keys(categories)[0]].name"></a></span>
+							<span><i class="icon-calendar"></i><a href="#" data-bind="text: moment(date).format(' Do MMM YYYY');"></a></span>
+							<span data-bind="visible: discussion.comments_open"><i class="icon-comment"></i> <a href="#" data-bind="text: discussion.comment_count + ' Comments'"></a></span>
+						</div>
+						<div data-bind="html: excerpt"></div>
+						<a class="btn btn-default" data-bind="attr: { href: '/blog/' + ID }">Read More <i class="icon-angle-right"></i></a>
+					</div>
+				</div><!--/.blog-item-->
+			</div>
+		</div><!--/.col-md-8-->
+	</div><!--/.row-->
+</section><!--/#blog-view-->
+<!-- /ko -->
+
+@section Styles
+{
+	<link href="~/css/blog.css" rel="stylesheet">
+}
+<script>
+	var homeUrls = @Html.Raw( Json.Serialize( Model ) );
+</script>
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/blog.js")" defer></script>
+}

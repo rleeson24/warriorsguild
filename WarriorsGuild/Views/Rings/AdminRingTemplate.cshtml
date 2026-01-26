@@ -1,0 +1,57 @@
+﻿<script type="text/html" id="admin-ring-template">
+	<div class="goal-grid-item">
+
+		<!--ring Name-->
+		<div class="goal-name">
+			<input type="text" class="form-control" placeholder="Name" data-bind="value: name">
+		</div>
+		<!--ring Name-->
+		<!--ring Image-->
+		<div class="goal-image image-upload">
+			<a href="#detail" data-bind="attr: { href: '#detail?id=' + id() }">
+				<img data-bind="attr:{ src: imgSrcAttr() }, visible: hasImage()" alt="goal-image" class="img-responsive">
+				<img src="/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image" class="img-placeholder" data-bind="visible: !hasImage()">
+			</a>
+			<div class="imgUpload">
+				<form data-bind="imageUploader: { key: $index(), postUrl: $parents[1].dataModel.imageUploadUrl + '/' + id(), imgUrl: $parents[1].dataModel.imageBaseUrl + '/' + id(), fileClass: 'image', maxSize: 200000, successCallBack: function() { $data.imageUploaded(new Date()); } }" action="" method="post" enctype="multipart/form-data">
+					<div style="position: relative; overflow: hidden;">
+						<h4 data-bind="text: 'Upload Image'"></h4>
+						<input type="file" data-bind="uniqueName: true" />
+					</div>
+				</form>
+			</div>
+			@*<div class="price">
+					<h4>$123</h4>
+				</div>*@
+		</div>
+		<!--ring Image-->
+		<!--ring Detail-->
+		<div class="goal-detail">
+
+			@*<div class="days-strength">
+					<div class="row">
+
+						<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+							<span><i class="fa fa-clock-o"></i></span><p>7 Days</p>
+						</div>
+
+						<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+							<span><i class="fa fa-users"></i></span><p>25</p>
+						</div>
+
+					</div>
+				</div>*@
+
+			<textarea class="form-control" placeholder="Description" data-bind="value: description"></textarea>
+		</div>
+		<!--ring Detail-->
+		<div>
+			<select class="form-control" id="cboType" data-bind="value: type, options: $parents[1].dataModel.RingTypes, optionsText: 'description', optionsValue: 'value', optionsCaption: 'Choose...'">
+			</select>
+		</div>
+		<button style="width: 100%; height: 100%" data-bind="click: function(data) { $parents[1].updateRing(data, $parents[1].dataModel.RingsUrl); }">
+			<span data-bind="text: 'Save'"></span>
+		</button>
+
+	</div>
+</script>

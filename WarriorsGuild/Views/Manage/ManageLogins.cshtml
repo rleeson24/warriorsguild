@@ -1,0 +1,94 @@
+﻿@model WarriorsGuild.Models.Account.ManageLoginsViewModel
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authentication
+@using WarriorsGuild.Data.Models
+@using WarriorsGuild.Models.Account
+@using WarriorsGuild.Utilities
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+	ViewBag.Title = "Manage your external logins";
+}
+<link rel="stylesheet" href="@Url.ContentVersioned("/bundles/bootstrapSocial.css")" />
+	<section>
+		<div class="container">
+			<div class="row">
+				<h2>@ViewBag.Title</h2>
+			</div>
+			<div class="row">
+				<div class="col-xs-12">
+					<p class="text-success">@ViewBag.StatusMessage</p>
+				</div>
+			</div>
+			@{
+			var loginProviders = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+			if (loginProviders.Count() == 0)
+			{
+			<div class="row">
+				<div class="col-xs-12">
+					There are no external authentication services configured. See <a href="https://go.microsoft.com/fwlink/?LinkId=313242">this article</a>
+					for details on setting up this ASP.NET application to support logging in via external services.
+				</div>
+			</div>
+			}
+			else
+			{
+			<div class="row">
+				<div class="col-xs-6">
+					<h4>Linked Logins</h4>
+					@if (Model.CurrentLogins.Count > 0)
+					{
+					foreach (var account in Model.CurrentLogins)
+					{
+					<div class="row">
+						<div class="col-md-8">
+							@if (ViewBag.ShowRemoveButton)
+							{
+							using (Html.BeginForm("RemoveLogin", "Manage"))
+							{
+							@Html.AntiForgeryToken()
+							<div>
+								@Html.Hidden("loginProvider", account.LoginProvider)
+								@Html.Hidden("providerKey", account.ProviderKey)
+								<button type="submit" class="btn btn-block btn-social btn-@account.LoginProvider.ToString().ToLower()" id="@account.LoginProvider" name="provider" value="Remove" title="Remove association with @account.LoginProvider.ToString()">
+									<span class="fa fa-@account.LoginProvider.ToString().ToLower()"></span> Remove association with @account.LoginProvider
+								</button>
+							</div>
+							}
+							}
+							else
+							{
+							<div class="btn btn-block btn-social btn-google" name="provider" title="Google">
+								<i class="fab fa-google"></i> @account.LoginProvider
+							</div>
+							}
+						</div>
+					</div>
+					}
+					}
+				</div>
+				@*<div class="col-xs-6">
+					@if (Model.OtherLogins.Count > 0)
+					{
+					using (Html.BeginForm("LinkLogin", "Manage"))
+					{
+					<h4>Available to Link</h4>
+					@Html.AntiForgeryToken()
+					foreach (AuthenticationScheme p in Model.OtherLogins)
+					{
+					<div class="row">
+						<div class="col-md-8">
+							<button type="submit" class="btn btn-block btn-social btn-@p.Name" id="@p.AuthenticationType.ToLower()" name="provider" value="@p.Name" title="Continue With @p.DisplayName">
+								<span class="fa fa-@p.Name.ToLower()"></span> Associate @p.DisplayName account
+							</button>
+						</div>
+					</div>
+					}
+					}
+					}
+				</div>*@
+			</div>
+			}
+			}
+	</section>

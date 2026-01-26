@@ -1,0 +1,61 @@
+﻿<!-- ko with: home -->
+<section id="pricing">
+	<div class="container">
+		<div class="center">
+			<h2>Welcome to Warriors Guild!</h2>
+			<h4>Thank you for participating in our beta.</h4>
+		</div><!--/.center-->
+		<div class="gap"></div>
+		<div id="pricing-table" class="row">
+			<div class="col-md-3 col-xs-6">
+				<div class="card small">
+					<div class="inner-border">
+						<ul class="plan plan1 public" style="background-position-y:-60px;">
+							<li style="height:90px"></li>
+							<li>
+								<div class="form-group center">
+									<button class="btn btn-primary btn-lg" onclick="window.location.href='/Account/Register';">Join</button>
+								</div>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div><!--/.col-md-3-->
+		</div>
+		@*<div id="pricing-table" class="row" data-bind="foreach: dataModel.PriceOptions">
+			<div class="col-md-3 col-xs-6">
+				<div class="card small">
+					<div class="inner-border">
+						<ul class="plan plan1 public">
+							<li class="plan-name">
+								<h3 data-bind="text: Description"></h3>
+							</li>
+							<li class="plan-price">
+								<div>
+									<strong><span class="price" data-bind="text: Charge.formatted()"></span></strong>
+									<small>month</small>
+								</div>
+							</li>
+							<li data-bind="text: IncludedGuardiansAndWarriorsString"></li>-->
+							<!--<li>
+								<strong data-bind="text: AdditionalGuardianCharge.formatted() + '/month'"></strong> Additional Guardian
+							</li>
+							<li>
+								<strong data-bind="text: AdditionalWarriorCharge.formatted() + '/month'"></strong> Additional Warrior
+							</li>
+							<li>
+								<div class="form-group center">
+									<button class="btn btn-primary btn-lg" data-bind="click: $parents[$parents.length - 2].SignUp">Join</button>
+								</div>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div><!--/.col-md-3-->-->
+		</div>*@
+	</div>
+</section><!--/#pricing-->
+<!-- /ko -->
+<script>
+	var homeUrls = @Html.Raw( Json.Serialize( Model ) );
+</script>

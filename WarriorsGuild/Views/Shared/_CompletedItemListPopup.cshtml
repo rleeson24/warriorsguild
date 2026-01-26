@@ -1,0 +1,15 @@
+﻿@model WarriorsGuild.Models.CompletedItemListPopupModel
+<div class="popup" data-bind="click: function() { @(Model.ViewModelForShowPopup)showPopup( '@Model.PopupId', @Model.WarriorIdFromContext ); }">
+	<h2 data-bind="text: @(Model.ViewModelPath).length"></h2>
+	<!-- ko if: @(Model.ViewModelPath).length > 0 -->
+	<div style="max-height:300px; height: auto; overflow-y: scroll">
+		<div class="popuptext" data-bind="attr: { 'id':'@(Model.PopupId)' + @Model.WarriorIdFromContext }, event: { mouseleave: function() { @(Model.ViewModelForShowPopup)closePopup( '@Model.PopupId', @Model.WarriorIdFromContext ); } }">
+			<!-- ko foreach: @(Model.ViewModelPath) -->
+			<div>
+				<img data-bind="attr: { src: imgSrcAttr() }" /><span><span data-bind="text: name()"></span></span>
+			</div>
+			<!-- /ko -->
+		</div>
+	</div>
+	<!-- /ko -->
+</div>

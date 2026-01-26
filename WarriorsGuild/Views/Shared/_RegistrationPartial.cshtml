@@ -1,0 +1,208 @@
+﻿@model WarriorsGuild.Models.Account.BaseRegistrationViewModel
+
+<div class="row">
+	<div class="col-xs-12 text-center">
+		@if (ViewData.ModelState.Values.Count() > 0)
+		{
+			<ul class="alert alert-danger">
+				@foreach (var modelState in ViewData.ModelState.Values)
+				{
+					foreach (var error in modelState.Errors)
+					{
+						<li>@error.ErrorMessage</li>
+					}
+				}
+			</ul>
+		}
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">
+		<div class="row">
+			@Html.LabelFor(m => m.Email, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.Email, (ViewBag.EmailReadOnly ?? false) ? (object)new
+											   {
+												   @class = "form-control",
+												   @readonly = "readonly"
+											   } : (object)new { @class = "form-control",
+												   @placeholder = User.Identity.IsAuthenticated ? "Warrior email not required" : ""
+											   })
+				@Html.ValidationMessageFor(model => model.Email, "", new { @class = "text-danger" })
+			</div>
+		</div>
+	</div>
+	<div class="col-md-6">
+		@if (Model is WarriorsGuild.Models.Account.RegisterViewModel)
+		{
+			<div class="row">
+				@Html.LabelFor(m => m.Password, new { @class = "col-md-4 control-label" })
+				<div class="col-md-8">
+					@Html.PasswordFor(m => m.Password, new { @class = "form-control" })
+					@Html.ValidationMessageFor(model => model.Password, "", new { @class = "text-danger" })
+				</div>
+			</div>
+		}
+	</div>
+</div>
+<div class="row">
+	<div class="col-md-6">
+		<div class="row">
+			@Html.LabelFor(m => m.UserName, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.UserName, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.UserName, "", new { @class = "text-danger" })
+				<div class="checkbox-inline">
+					<label>
+						<input type="checkbox" id="KeepUsernameInSyncWithEmailAddress" checked="checked"> Use email address
+					</label>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-6">
+		@if (Model is WarriorsGuild.Models.Account.RegisterViewModel)
+		{
+			<div class="row">
+				@Html.LabelFor(m => m.ConfirmPassword, new { @class = "col-md-4 control-label" })
+				<div class="col-md-8">
+					@Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control" })
+					@Html.ValidationMessageFor(model => model.ConfirmPassword, "", new { @class = "text-danger" })
+				</div>
+			</div>
+		}
+	</div>
+</div>
+<div class="row">
+	<hr class="col-xs-12" />
+</div>
+<div class="row">
+	<div class="col-md-6">
+		<div class="row">
+			@Html.LabelFor(m => m.FirstName, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.FirstName, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.FirstName, "", new { @class = "text-danger" })
+			</div>
+		</div>
+	</div>
+	<div class="col-md-6">
+		<div class="row">
+			@Html.LabelFor(m => m.LastName, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.LastName, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.LastName, "", new { @class = "text-danger" })
+			</div>
+		</div>
+	</div>
+</div>
+<div class="row">
+	<hr class="col-xs-12" />
+</div>
+<div class="row">
+	<div class="col-md-6">
+		<div class="row">
+			@Html.LabelFor(m => m.AddressLine1, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.AddressLine1, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.AddressLine1, "", new { @class = "text-danger" })
+			</div>
+		</div>
+		<div class="row">
+			@Html.LabelFor(m => m.AddressLine2, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.AddressLine2, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.AddressLine2, "", new { @class = "text-danger" })
+			</div>
+		</div>
+		<div class="row">
+			@Html.LabelFor(m => m.City, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.City, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.City, "", new { @class = "text-danger" })
+			</div>
+		</div>
+		<div class="row">
+			@Html.LabelFor(m => m.State, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.DropDownListFor(m => m.State, Model.StateOptions, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.State, "", new { @class = "text-danger" })
+			</div>
+		</div>
+		<div class="row">
+			@Html.LabelFor(m => m.PostalCode, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.PostalCode, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.PostalCode, "", new { @class = "text-danger" })
+			</div>
+		</div>
+	</div>
+	<div class="col-md-6">
+		<div class="row">
+			@Html.LabelFor(m => m.PhoneNumber, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control phone-format" })
+				@Html.ValidationMessageFor(model => model.PhoneNumber, "", new { @class = "text-danger" })
+			</div>
+		</div>
+		<div class="row">
+			@Html.LabelFor(m => m.ShirtSize, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.DropDownListFor(m => m.ShirtSize, Model.ShirtSizeOptions, new { @class = "form-control" })
+				@Html.ValidationMessageFor(model => model.ShirtSize, "", new { @class = "text-danger" })
+			</div>
+		</div>
+		<div class="row">
+			@Html.LabelFor(m => m.BirthDate, new { @class = "col-md-4 control-label" })
+			<div class="col-md-8">
+				@Html.EditorFor(m => m.BirthDate, new { htmlAttributes = new { @class = "form-control" } } )
+				@*<input class="form-control" data-val="true" data-val-required="The Birth Date field is required." id="BirthDate" name="BirthDate" type="text" value="1/1/0001 00:00:00">*@
+				@Html.ValidationMessageFor(model => model.BirthDate, "", new { @class = "text-danger" })
+			</div>
+		</div>
+	</div>
+</div>
+@*<div class="row">
+		<div class="col-xs-12">
+			@Html.LabelFor( m => m.FavoriteVerse, new { @class = "col-md-4 control-label" } )
+			<div class="col-md-8">
+				@Html.TextBoxFor( m => m.FavoriteVerse, new { @class = "form-control" } )
+				@Html.ValidationMessageFor( model => model.FavoriteVerse, "", new { @class = "text-danger" } )
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-12">
+			@Html.LabelFor( m => m.Hobbies, new { @class = "col-md-4 control-label" } )
+			<div class="col-md-8">
+				@Html.TextBoxFor( m => m.Hobbies, new { @class = "form-control" } )
+				@Html.ValidationMessageFor( model => model.Hobbies, "", new { @class = "text-danger" } )
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-12">
+			@Html.LabelFor( m => m.InterestingFact, new { @class = "col-md-4 control-label" } )
+			<div class="col-md-8">
+				@Html.TextBoxFor( m => m.InterestingFact, new { @class = "form-control" } )
+				@Html.ValidationMessageFor( model => model.InterestingFact, "", new { @class = "text-danger" } )
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-12">
+			@Html.LabelFor( m => m.FavoriteMovie, new { @class = "col-md-4 control-label" } )
+			<div class="col-md-8">
+				@Html.TextBoxFor( m => m.FavoriteMovie, new { @class = "form-control" } )
+				@Html.ValidationMessageFor( model => model.FavoriteMovie, "", new { @class = "text-danger" } )
+			</div>
+		</div>
+	</div>*@
+<div class="row" style="padding: 20px;">
+	<div class="form-group col-xs-12">
+		<div class="center">
+			<button type="submit" class="btn btn-primary">Register</button>
+		</div>
+	</div>
+</div>

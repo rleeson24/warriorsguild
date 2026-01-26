@@ -1,0 +1,38 @@
+﻿@model WarriorsGuild.Models.Account.IndexViewModel
+@{
+	ViewBag.Title = "Administration | Warriors Guild";
+}
+@using WarriorsGuild.Utilities
+
+<section class="plain">
+	<div class="container">
+		<h2>Administration</h2>
+
+		<p class="text-success">@ViewBag.StatusMessage</p>
+		<div>
+			<h4>Manage site settings</h4>
+			<hr />
+			<dl class="dl-horizontal">
+				<dt>Payment Plans:</dt>
+				<dd>
+					[
+					@Html.ActionLink( "Manage", "ManagePriceOptions" )
+					]
+				</dd>
+			</dl>
+			<h4>Invite to trial</h4>
+			<hr />
+			<dl class="dl-horizontal">
+				<dd>
+					[
+					@Html.ActionLink( "Invite", "Invite" )
+					]
+				</dd>
+			</dl>
+		</div>
+	</div>
+</section>
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/admin.js")" defer></script>
+}

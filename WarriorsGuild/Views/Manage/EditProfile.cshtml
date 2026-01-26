@@ -1,0 +1,355 @@
+﻿@model WarriorsGuild.Models.EditProfileViewModel
+@using Microsoft.Extensions.Configuration
+@using WarriorsGuild.Utilities
+@inject IConfiguration Configuration
+
+@{
+	ViewBag.Title = "Edit Profile";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+
+	var isGuardian = User.IsInRole("Guardian");
+}
+
+<link href="@Url.ContentVersioned("/css/stripe.css")" rel="stylesheet">
+
+<!-- ko with: ProfileEditor -->
+<section>
+
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12 text-center">
+				<h2>My Profile</h2>
+				<hr />
+			</div>
+		</div>
+
+		<div class="row koDiv">
+			<div class="col-xs-12" style="text-align: center; min-height: 150px;">
+				<div class="user-photo" style="display: inline-block;">
+					<!-- ko if: dataModel.HasAvatar() -->
+					<img data-bind="attr: { src: '@Model.Urls.GetAvatarUrl' }" style="margin-top: -50px; width: 180px; height: 180px; border-radius: 50%">
+					<!-- /ko -->
+					<!-- ko if: !dataModel.HasAvatar() -->
+					<span>@Model.User.UserName</span>
+					<!-- /ko -->
+				</div>
+				<form data-bind="imageUploader: { key: 'avatarUpload', id: '1', postUrl: dataModel.AvatarUploadUrl, imgUrl: '@Model.Urls.GetAvatarUrl', fileClass: 'image', maxSize: 300000, successCallBack: function(uploadedFile) { dataModel.Avatar(uploadedFile.fileData); dataModel.AvatarContentType(uploadedFile.contentType);} }" action="" method="post" enctype="multipart/form-data">
+					<div style="position: relative; overflow: hidden;" class="btn btn-lg btn-info">
+						<h4>Upload Avatar</h4>
+						<div style="font-size:.7em">(square image)</div>
+						<input type="file" data-bind="uniqueName: true" accept=".jpg,.png" />
+					</div>
+				</form>
+			</div>
+		</div>
+
+		@using (Html.BeginForm("", "Me", FormMethod.Post, new { id = "form1", @class = "form-horizontal", role = "form" }))
+		{
+			<div class="row">
+				<div class="col-xs-12">
+					@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+				</div>
+			</div>
+			@Html.AntiForgeryToken()
+
+			@Html.HiddenFor(model => model.User.Id)
+
+			<div class="row">
+				<hr class="col-xs-12" />
+			</div>
+
+			<div class="row">
+				@Html.LabelFor(m => m.User.Email, new { @class = "col-md-2 control-label" })
+				<div class="col-md-4">
+					@Html.EditorFor(m => m.User.Email, new { htmlAttributes = new { @class = "form-control" } })
+					@Html.ValidationMessageFor(model => model.User.Email, "", new { @class = "text-danger" })
+				</div>
+				@Html.LabelFor(model => model.User.EmailConfirmed, htmlAttributes: new { @class = "control-label col-md-2" })
+				<div class="col-md-4">
+					@Html.EditorFor(model => model.User.EmailConfirmed, new { htmlAttributes = new { @class = "form-control" } })
+					@Html.ValidationMessageFor(model => model.User.EmailConfirmed, "", new { @class = "text-danger" })
+				</div>
+			</div>
+			<div class="row">
+				<hr class="col-xs-12" />
+			</div>
+			<div class="row">
+				@Html.LabelFor(model => model.User.UserName, htmlAttributes: new { @class = "control-label col-md-2" })
+				<div class="col-md-4">
+					@Html.EditorFor(model => model.User.UserName, new { htmlAttributes = new { @class = "form-control" } })
+					@Html.ValidationMessageFor(model => model.User.UserName, "", new { @class = "text-danger" })
+					<div class="checkbox-inline">
+						<label>
+							<input type="checkbox" id="KeepUsernameInSyncWithEmailAddress" checked="checked"> Use email address
+						</label>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="row">
+						@Html.LabelFor(m => m.User.FirstName, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.FirstName, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.FirstName, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="row">
+						@Html.LabelFor(m => m.User.LastName, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.LastName, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.LastName, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<hr class="col-xs-12" />
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="row">
+						@Html.LabelFor(m => m.User.AddressLine1, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.AddressLine1, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.AddressLine1, "", new { @class = "text-danger" })
+						</div>
+					</div>
+					<div class="row">
+						@Html.LabelFor(m => m.User.AddressLine2, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.AddressLine2, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.AddressLine2, "", new { @class = "text-danger" })
+						</div>
+					</div>
+					<div class="row">
+						@Html.LabelFor(m => m.User.City, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.City, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.City, "", new { @class = "text-danger" })
+						</div>
+					</div>
+					<div class="row">
+						@Html.LabelFor(m => m.User.State, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.DropDownListFor(m => m.User.State, Model.User.StateOptions, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.State, "", new { @class = "text-danger" })
+						</div>
+					</div>
+					<div class="row">
+						@Html.LabelFor(m => m.User.PostalCode, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.PostalCode, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.PostalCode, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="row">
+						@Html.LabelFor(m => m.User.PhoneNumber, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.PhoneNumber, new { @class = "form-control phone-format" })
+							@Html.ValidationMessageFor(model => model.User.PhoneNumber, "", new { @class = "text-danger" })
+						</div>
+					</div>
+					<div class="row">
+						@Html.LabelFor(m => m.User.ShirtSize, new { @class = "col-md-4 control-label" })
+						<div class="col-md-8">
+							@Html.DropDownListFor(m => m.User.ShirtSize, Model.User.ShirtSizeOptions, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.ShirtSize, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row"><hr class="col-xs-12" /></div>
+			@*<div class="row">
+					<div class="col-xs-12">
+						@Html.LabelFor(m => m.User.FavoriteVerse, new { @class = "col-md-2 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.FavoriteVerse, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.City, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-xs-12">
+						@Html.LabelFor(m => m.User.Hobbies, new { @class = "col-md-2 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.Hobbies, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.City, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-xs-12">
+						@Html.LabelFor(m => m.User.InterestingFact, new { @class = "col-md-2 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.InterestingFact, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.City, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-xs-12">
+						@Html.LabelFor(m => m.User.FavoriteMovie, new { @class = "col-md-2 control-label" })
+						<div class="col-md-8">
+							@Html.TextBoxFor(m => m.User.FavoriteMovie, new { @class = "form-control" })
+							@Html.ValidationMessageFor(model => model.User.City, "", new { @class = "text-danger" })
+						</div>
+					</div>
+				</div>*@
+
+			<div class="form-group">
+				<div class="text-center">
+					<p id="updateUserMessage" class="alert" data-bind="text: SaveProfileResult(), css: { 'alert-danger': SaveProfileFailure(), 'alert-info': SaveProfileSuccess() }"></p>
+					<button type="button" class="btn btn-primary" data-bind="click: SaveProfile, disabled: SavingProfile()">Save</button>
+				</div>
+			</div>
+		}
+	</div>
+</section>
+@if (isGuardian)
+{
+	<section>
+		<div class="container">
+			<div class="row">
+				<div class="col-xs-12 col-sm-8 col-sm-offset-1 col-md-offset-2">
+					<div class="row">
+						<h2 class="col-xs-12 text-center">Registered Payment Methods</h2>
+					</div>
+					<div class="row">
+						<h3 class="col-xs-5">Credit and Debit Cards</h3>
+						<h3 class="col-xs-7">Expires</h3>
+					</div>
+					<div class="row payment-method-list-item" data-bind="foreach: dataModel.PaymentMethods">
+						<div class="col-xs-12">
+							<div class="row" style="background-color: silver; padding-top: 14px; border-radius: 4px;">
+								<div class="col-xs-5 card-desc" data-bind="text: brand() + ' ending in ' + last4()"></div>
+								<div class="col-xs-2 card-expiration">
+									<span data-bind="text: expirationDate()"></span>
+								</div>
+								<div class="col-xs-5 buttons">
+									<button class="btn btn-danger" style="margin-top: -7px;" data-bind="click: $parent.deletePaymentMethod">Remove</button>
+									@*<button class="btn btn-primary" style="margin-top: -7px;" data-bind="visible: !isDefault(), click: $parent.setDefaultPaymentMethod">Make Default</button>*@
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-xs-12">
+					<div id="payment-form">
+						<div class="example">
+							<form method="post">
+								<div class="col-xs-12">
+									@Html.HiddenFor(m => m.StripePublishableKey)
+									<div class="form-row center">
+										<label for="card-element">
+											Credit or debit card
+										</label>
+										<div id="card-element">
+											<!-- A Stripe Element will be inserted here. -->
+										</div>
+
+										<!-- Used to display form errors. -->
+										<div id="card-errors" class="alert-danger" role="alert"></div>
+									</div>
+								</div>
+								<div class="col-xs-12">
+									<button class="form-control">Save Payment Method</button>
+								</div>
+								<div class="error" role="alert">
+									<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 17 17">
+										<path class="base" fill="#000" d="M8.5,17 C3.80557963,17 0,13.1944204 0,8.5 C0,3.80557963 3.80557963,0 8.5,0 C13.1944204,0 17,3.80557963 17,8.5 C17,13.1944204 13.1944204,17 8.5,17 Z" />
+										<path class="glyph" fill="#FFF" d="M8.5,7.29791847 L6.12604076,4.92395924 C5.79409512,4.59201359 5.25590488,4.59201359 4.92395924,4.92395924 C4.59201359,5.25590488 4.59201359,5.79409512 4.92395924,6.12604076 L7.29791847,8.5 L4.92395924,10.8739592 C4.59201359,11.2059049 4.59201359,11.7440951 4.92395924,12.0760408 C5.25590488,12.4079864 5.79409512,12.4079864 6.12604076,12.0760408 L8.5,9.70208153 L10.8739592,12.0760408 C11.2059049,12.4079864 11.7440951,12.4079864 12.0760408,12.0760408 C12.4079864,11.7440951 12.4079864,11.2059049 12.0760408,10.8739592 L9.70208153,8.5 L12.0760408,6.12604076 C12.4079864,5.79409512 12.4079864,5.25590488 12.0760408,4.92395924 C11.7440951,4.59201359 11.2059049,4.59201359 10.8739592,4.92395924 L8.5,7.29791847 L8.5,7.29791847 Z" />
+									</svg>
+									<span class="message"></span>
+								</div>
+							</form>
+							<div class="success">
+								<div class="icon">
+									<svg width="84px" height="84px" viewBox="0 0 84 84" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+										<circle class="border" cx="42" cy="42" r="40" stroke-linecap="round" stroke-width="4" stroke="#000" fill="none" />
+										<path class="checkmark" stroke-linecap="round" stroke-linejoin="round" d="M23.375 42.5488281 36.8840688 56.0578969 64.891932 28.0500338" stroke-width="4" stroke="#000" fill="none" />
+									</svg>
+								</div>
+								<h3 class="busyTitle" data-tid="elements_examples.success.busyTitle">Saving...</h3>
+								<h3 class="title" data-tid="elements_examples.success.title">Create successful</h3>
+								<p class="message"><span data-tid="elements_examples.success.message">Your payment method was successfully created.</span></p>
+								@*<a class="reset" href="#">
+										<svg width="32px" height="32px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+											<path fill="#000000" d="M15,7.05492878 C10.5000495,7.55237307 7,11.3674463 7,16 C7,20.9705627 11.0294373,25 16,25 C20.9705627,25 25,20.9705627 25,16 C25,15.3627484 24.4834055,14.8461538 23.8461538,14.8461538 C23.2089022,14.8461538 22.6923077,15.3627484 22.6923077,16 C22.6923077,19.6960595 19.6960595,22.6923077 16,22.6923077 C12.3039405,22.6923077 9.30769231,19.6960595 9.30769231,16 C9.30769231,12.3039405 12.3039405,9.30769231 16,9.30769231 L16,12.0841673 C16,12.1800431 16.0275652,12.2738974 16.0794108,12.354546 C16.2287368,12.5868311 16.5380938,12.6540826 16.7703788,12.5047565 L22.3457501,8.92058924 L22.3457501,8.92058924 C22.4060014,8.88185624 22.4572275,8.83063012 22.4959605,8.7703788 C22.6452866,8.53809377 22.5780351,8.22873685 22.3457501,8.07941076 L22.3457501,8.07941076 L16.7703788,4.49524351 C16.6897301,4.44339794 16.5958758,4.41583275 16.5,4.41583275 C16.2238576,4.41583275 16,4.63969037 16,4.91583275 L16,7 L15,7 L15,7.05492878 Z M16,32 C7.163444,32 0,24.836556 0,16 C0,7.163444 7.163444,0 16,0 C24.836556,0 32,7.163444 32,16 C32,24.836556 24.836556,32 16,32 Z" />
+										</svg>
+									</a>*@
+							</div>
+							<div class="center">
+								<a href="http://www.stripe.com"><img src="~/images/powered_by_stripe.png" /></a>
+								<div>The Stripe name and logos are trademarks or service marks of Stripe, Inc. or its affiliates in the U.S. and other countries. Other names may be trademarks of their respective owners.</div>
+							</div>
+						</div>
+					</div>
+					<div class="clearfix"></div>
+				</div>
+			</div>
+		</div>
+	</section>
+}
+<!-- /ko -->
+
+<script>
+	var profileEditorUrls = @Html.Raw(Json.Serialize(Model.Urls));
+	var avatar = '@Html.Raw(Model.User.Avatar)';
+	var avatarContentType = '@Model.User.AvatarContentType';
+	var stripePublishableKey = '@Model.StripePublishableKey';
+</script>
+
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/profileEditor.js")" defer></script>
+	<script type="text/javascript" defer>
+		jQuery.LiveAddress( {
+				key: '@Configuration[ "SmartyStreetsKey" ]',
+				debug: false,
+					target: "US",
+					addresses: [{
+							id: 'mailing',		// IDs are not part of the address
+							address1: '#User_AddressLine1',
+							address2: '#User_AddressLine2',	// Not all these fields are required
+							locality: '#User_City',
+							administrative_area: '#User_State',
+							postal_code: '#User_PostalCode'/*,
+							country: '#Country'*/
+					}]
+		});
+		$('#User_State').val('');
+		$('#User_State').val('@(Model.User.State)');
+	</script>
+
+	<script type="text/javascript">
+		$( '#User_Email' )
+			.change( function () {
+				if ( $( '#KeepUsernameInSyncWithEmailAddress' ).prop( 'checked' ) ) {
+					var tbUserName = $( '#User_UserName' );
+					if ( tbUserName.val() === $( this ).data( 'oldVal' ) ) {
+						tbUserName.val( $( this ).val() );
+					}
+				}
+			})
+			.focus( function () {
+				$( this ).data( 'oldVal', $( this ).val() );
+			} );
+		$( '#KeepUsernameInSyncWithEmailAddress' )
+			.change( function () {
+				$( '#User_UserName' ).prop( "readonly", $( this ).prop( 'checked' ) )
+				if ( $( this ).prop( 'checked' ) )
+				{
+					$( '#User_UserName' ).val( $( '#User_Email' ).val() );
+				}
+			} );
+		$( '#User_UserName' ).prop( 'readonly', '@Model.User.Email' === '@Model.User.UserName' );
+		$( '#KeepUsernameInSyncWithEmailAddress' ).prop( 'checked', '@Model.User.Email' === '@Model.User.UserName' );
+	</script>
+}

@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+    <script src="/bundles/oidc.js"></script>
+    <script>
+        console.log('callback');
+        oidcManager.signinRedirectCallback().then(function (user) {
+            if (user.state?.user_callback_page) {
+                window.location.assign(user.state.user_callback_page.href);
+            }
+        }).catch(function (e) {
+			console.error(e);
+			window.location = "/";
+        });
+    </script>
+</body>
+</html>

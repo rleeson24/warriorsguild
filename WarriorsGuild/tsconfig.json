@@ -1,0 +1,22 @@
+﻿{
+	"compileOnSave": true,
+	"compilerOptions": {
+		"noImplicitAny": false,
+		"noEmitOnError": true,
+		"removeComments": false,
+		"sourceMap": true,
+		"target": "es5",
+		"moduleResolution": "Node",
+		"outDir": "wwwroot/scripts",
+		"allowJs": true,
+		"skipLibCheck": true
+	},
+	"include": [
+		"./Scripts/**/*"
+	],
+	"exclude": [
+		"node_modules",
+		"obj",
+		"bin"
+	]
+}

@@ -1,0 +1,289 @@
+﻿@model WarriorsGuild.Models.RingsUrls
+@{
+	ViewBag.Title = "Rings | Warriors Guild";
+	var UserIsAdmin = User.IsInRole("Admin");
+	var UserIsAdminString = UserIsAdmin.ToString().ToLower();
+	var UserIsGuardian = User.IsInRole("Guardian");
+	var UserIsGuardianString = UserIsGuardian.ToString().ToLower();
+	var UserIsWarrior = User.IsInRole("Warrior");
+	var UserIsWarriorString = UserIsWarrior.ToString().ToLower();
+	var ringTypesJsonArrayString = Json.Serialize(Enum.GetNames(typeof(RingType))
+											.Select(e => new { value = e, description = e }).ToArray());
+}
+@using WarriorsGuild.Data.Models.Rings
+@using WarriorsGuild.Utilities
+@inject WarriorsGuild.Helpers.Utilities.ISessionManager SessionManager
+
+<partial name="~/Views/Rings/RingTemplate.cshtml" />
+@if (UserIsAdmin)
+{
+	<partial name="~/Views/Rings/AdminRingTemplate.cshtml" />
+	<partial name="~/Views/Rings/AddRingTemplate.cshtml" />
+}
+
+<!-- ko with: rings -->
+<div class="container text-center" id="goal-grid">
+	<div class="row" data-bind="visible: !DetailView()">
+		@if (UserIsAdmin)
+		{
+			if (!SessionManager.PreviewMode)
+			{
+				<div data-bind="sortable: { data: dataModel.Rings, as: 'ring', afterMove: saveNewRingOrder }">
+					<div class="col-xs-12 col-sm-6 col-md-3 col-lg-3" data-bind="template: { data: ring, name: 'admin-ring-template' }"></div>
+				</div>
+				<div class="col-xs-12 col-sm-6 col-md-3 col-lg-3" data-bind="template: { name: 'add-ring-template' }"></div>
+			}
+		}
+		@if (!UserIsAdmin || SessionManager.PreviewMode)
+		{
+			<div data-bind="visible: dataModel.Rings().length === 0" class="col-xs-12 center" style="display:none">
+				<h3 style="margin-bottom: 200px;">No Rings were found in the system.  Please contact administrator.</h3>
+			</div>
+			<!-- ko foreach: { data: dataModel.Rings, as: 'ring' } -->
+			<div class="col-xs-12 col-sm-6 col-md-3 col-lg-3" data-bind="template: { data: ring, name: 'ring-template' }"></div>
+
+			<!-- Add the extra clearfix for only the required viewport -->
+			<!-- ko if: ( $index() + 1 ) % 2 === 0 -->
+			<div class="clearfix visible-sm-block hidden-md hidden-lg"></div>
+			<!-- /ko -->
+			<!-- ko if: ( $index() + 1 ) % 4 === 0 -->
+			<div class="clearfix visible-md-block visible-lg-block"></div>
+			<!-- /ko -->
+			<!-- /ko -->
+		}
+	</div>
+	<div data-bind="visible: DetailView()" style="display:none" class="goal-detail">
+		<!-- ko with: ringDetail -->
+		<div class="row text-center">
+			<div class="col-xs-12">
+				<h1 data-bind="text: name()"></h1>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12 col-sm-offset-4 col-sm-4">
+				<div class="image-upload">
+					<img data-bind="attr:{ src: imgSrcAttr() }, visible: hasImage()" alt="goal-image" style="width:100%" />
+					<img src="/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image" class="img-placeholder" data-bind="visible: !hasImage()">
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12">
+				<p data-bind="text: description()">
+				</p>
+			</div>
+		</div>
+
+		@if (User.Identity.IsAuthenticated)
+		{
+			<div class="row">
+				@if (UserIsAdmin && !SessionManager.PreviewMode)
+				{
+					<div class="col-xs-12">
+						<div class="btn btn-sm btn-info documentationUpload">
+							<form data-bind="imageUploader: { key: 'uploadRingDocumentation',
+													id: id(),
+													postUrl: ringUrls.uploadGuideUrl + '/' + id(),
+													imgUrl: ringUrls.downloadGuideUrl + '/' + id(),
+													fileClass: 'pdf',
+													successCallBack: function() { $data.guideUploaded(new Date()); } }" action="" method="post" enctype="multipart/form-data">
+								<div style="overflow: hidden;">
+									<span class="glyphicon glyphicon-upload"></span><span> Upload Documentation</span>
+									<input type="file" data-bind="uniqueName: true" />
+								</div>
+							</form>
+						</div>
+					</div>
+				}
+			</div>
+			@if (!UserIsWarrior)
+			{
+				<div class="row">
+					<div class="col-xs-12" data-bind="visible: $data.hasGuide()">
+						<a data-bind="attr: { href: ringUrls.downloadGuideUrl + '/' + id() }" download>Download the Guide <img src="~/images/download.png" style="width:22px" /></a>
+					</div>
+				</div>
+			}
+			<div class="container">
+				@if (UserIsWarrior)
+				{
+					<!-- The modal -->
+					<div class="modal fade" id="requestPromotionPopup" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+						<div class="modal-dialog" role="document">
+							<div class="modal-content">
+								<div class="modal-header">
+									<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+										<span aria-hidden="true">&times;</span>
+									</button>
+									<h4 class="modal-title" id="modalLabel">Request Promotion</h4>
+								</div>
+								<div class="modal-body">
+									<h1 style="width:100%;">Congratulations!</h1>
+									<h2 style="width:100%;">You have completed this Ring!</h2>
+								</div>
+								<div class="modal-footer">
+									<button class="btn btn-primary" data-bind="click: function(data) { $parent.submitForApproval(data); }, text: 'Submit to Guardian'" data-dismiss="modal"></button>
+								</div>
+							</div>
+						</div>
+					</div>
+				}
+				<div class="row"><h3>Requirements</h3></div>
+
+				@if (UserIsAdmin)
+				{
+					if (UserIsAdmin && !SessionManager.PreviewMode)
+					{
+						<p class="col-xs-12">Rearrange items by drag-and-drop</p>
+						<div class="row" data-bind="sortable: requirements" id="requirementsList">
+							<div class="col-xs-12 col-sm-12 col-md-offset-1 col-md-9 text-left editable-requirement">
+								<div class="row">
+									<div class="col-xs-1" style="font-size: 1.5em;" data-bind="text: $index() + 1"></div>
+									<div class="col-xs-11">
+										<div style="position: relative;">
+											<textarea class="form-control" data-bind="value: actionToComplete"></textarea>
+											<span>See How Link: </span><input type="text" class="form-control" data-bind="value: seeHowLink" /><span class="text-danger" data-bind="visible: seeHowLinkInvalid()">Invalid See How Url</span>
+											<div class="btn-group wg-btn-remove-grp">
+												<button type="button" class="btn btn-xs btn-default wg-btn-remove" style="padding-top: 4px;" data-bind="click: function() { $parent.requirements.remove($data); }"><span class="glyphicon glyphicon-trash"></span></button>
+											</div>
+										</div>
+									</div>
+									<div class="col-xs-1"></div>
+									<div class="form-group">
+										<label class="col-xs-2 col-sm-1 col-form-label" style="padding-top: 5px" for="inputWeight">Weight:</label>
+										<div class="col-xs-3 col-sm-2"><input type="text" class="form-control" id="inputWeight" maxlength="3" data-bind="value: weight" /></div>
+									</div>
+									<div class="col-xs-4 col-sm-6 text-left">
+										<div class="col-xs-12 col-md-6">
+											<div class="check">
+												<div class="squaredThree">
+													<input type="checkbox" data-bind="attr: { id: 'rqChkRequireAttachment' + $index() },
+																	checked: requireAttachment" />
+													<label data-bind="attr: { for: 'rqChkRequireAttachment' + $index() }"></label>
+												</div>
+											</div>
+											<label data-bind="attr: { for: 'rqChkRequireAttachment' + $index() }">Require Attachment</label>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-xs-12">
+								<button class="btn btn-xs btn-addnew" data-bind="click: addRequirement"><span class="glyphicon glyphicon-plus-sign"></span>&nbsp;Add New Requirement</button>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-xs-12">
+								<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parent.updateRequirements(data, $parent.dataModel.RingsUrl); }">Save Changes</button>
+							</div>
+						</div>
+					}
+				}
+				@if (!UserIsAdmin || SessionManager.PreviewMode)
+				{
+					<div class="row" data-bind="foreach: requirements">
+						<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8 col-lg-offset-3 col-lg-6 text-left col-requirement">
+							<div class="check">
+								<div class="squaredThree" data-bind="css: { completed: guardianReviewed(), triggerAttachment: requireAttachment() && !lockEntry }">
+									@if (!ViewBag.HasActiveSubscription)
+									{
+										<div data-bind="attr: { id: 'rq' + $index() }"></div>
+									}
+									else
+									{
+										<!-- ko if: !requireAttachment() || warriorCompleted() -->
+										<input type="checkbox" data-bind="enable: !guardianReviewed() && !$parent.pendingApproval() && !lockEntry,
+																		attr: { id: 'rq' + $index(), alt: completionSummaryText(), css: { completed: guardianReviewed() } },
+																		checked: warriorCompleted(),
+																		click: (!warriorCompleted()) ? markAsComplete : (!guardianReviewed() && !$parent.pendingApproval()) ? revertCompletion : function() {}" />
+										<!-- /ko -->
+										<!-- ko if: requireAttachment() && !warriorCompleted() -->
+										<input type="checkbox" data-bind="enable: !guardianReviewed() && !$parent.pendingApproval() && !lockEntry,
+																		attr: { id: 'rq' + $index(), alt: completionSummaryText(), css: { completed: guardianReviewed() } },
+																		checked: warriorCompleted()" />
+										<!-- /ko -->
+									}
+									<label data-bind="attr: { for: 'rq' + $index(), title: completionSummaryText() }"></label>
+									<!-- ko if: requireAttachment() && !warriorCompleted() -->
+									<form data-bind="imageUploader: { key: 'POC' + id,
+														id: id,
+														postUrl: ringUrls.proofOfCompletionUrl,
+														fileClass: 'any',
+														maxSize: 5000000,
+														successCallBack: function( respData ) { $data.addAttachment( respData ); $data.warriorCompletedTs(new Date()); } }, uniqueName: true" action="" method="post" enctype="multipart/form-data">
+										<input type="hidden" data-bind="attr: { name: 'reqId' + $index() }, textInput: id" />
+										<input type="hidden" data-bind="attr: { name: 'ringId' + $index() }, textInput: $parents[1].ringDetail.id()" />
+										<input type="file" data-bind="uniqueName: true" multiple />
+									</form>
+									<!-- /ko -->
+								</div>
+							</div>
+							<span class="actionToComplete" data-bind="html: actionToCompleteLinked, css: { pendingApproval: $parent.pendingApproval() }"></span>
+						</div>
+						<!-- ko if: isLoggedIn -->
+						<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8" data-bind="visible: requireAttachment() && warriorCompleted()">
+							<div class="rankAdditionalRingRequirements">
+								<label>Attachments:</label>
+								<!-- ko foreach: attachments -->
+								<a data-bind="click: $parents[2].downloadProofOfCompletionFile" style="cursor: pointer" class="btn btn-sm btn-info">
+									<span data-bind="text:$index() + 1"></span>
+								</a>
+								<!-- /ko -->
+							</div>
+						</div>
+						<!-- /ko -->
+					</div>
+					@if (UserIsWarrior)
+					{
+						<div class="row">
+							<div class="col-xs-12">
+								<button class="btn btn-sm btn-success" data-bind="click: function(data) { $parent.submitForApproval(data); }, visible: completedPercent() == 100 && !$parent.ringDetail.warriorCompleted()">Submit to Guardian</button>
+								<button class="btn btn-sm btn-danger" data-bind="click: function(data) { $parent.returnRing(data, $parent.dataModel.RingStatusUrl); }, visible: $parent.ringDetail.warriorCompleted() && !$parent.ringDetail.guardianReviewed()">Recall Request for Review</button>
+							</div>
+						</div>
+					}
+					else if (UserIsGuardian || SessionManager.PreviewMode)
+					{
+						<div class="row">
+							<div class="col-xs-12">
+								<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parent.confirmRingCompletion(data, $parent.dataModel.RingStatusUrl); }, visible: $parent.ringDetail.warriorCompleted() && !$parent.ringDetail.guardianReviewed()">Confirm Completion</button>
+								<button class="btn btn-sm btn-danger" data-bind="click: function(data) { $parent.returnRing(data, $parent.dataModel.RingStatusUrl); }, visible: $parent.ringDetail.warriorCompleted() && !$parent.ringDetail.guardianReviewed()">Return to Warrior</button>
+							</div>
+						</div>
+					}
+					<!-- ko if: $parent.ringDetail.guardianReviewed() -->
+					<div class="row">
+						<div class="col-xs-12">
+							<h3>Completed and Confirmed!</h3>
+						</div>
+					</div>
+					<!-- /ko -->
+				}
+			</div>
+		}
+		<!-- /ko -->
+	</div>
+</div>
+
+<script>
+    var ringUrls = @Html.Raw(Json.Serialize(Model));
+	var ringTypes = @Html.Raw(@ringTypesJsonArrayString);
+	var isLoggedIn = @User.Identity.IsAuthenticated.ToString().ToLower()
+	var canViewAll = isLoggedIn && @((UserIsAdmin || ViewBag.HasActiveSubscription ).ToString().ToLower());
+	var userIsWarrior = @UserIsWarriorString;
+</script>
+<!-- /ko -->
+
+@section Styles {
+	<link href="@Url.ContentVersioned("~/bundles/jquery-ui.css")" rel="stylesheet" />
+}
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/rings.js")" defer></script>
+	@*<script type="text/javascript" defer>
+		$(document).ready(function () {
+			$("#requestPromotionPopup").dialog({ autoOpen: false, modal: true, title: "Submit to Guardian" });
+		});
+	</script>*@
+}

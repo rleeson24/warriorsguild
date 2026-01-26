@@ -1,0 +1,73 @@
+﻿@model WarriorsGuild.Models.Account.ExternalLoginConfirmationViewModel
+@using Microsoft.Extensions.Configuration
+@using WarriorsGuild.Utilities
+@inject IConfiguration Configuration
+@{
+	ViewBag.Title = "Register";
+	ViewBag.EmailReadOnly = "true";
+}
+<section>
+	<div class="container">
+		<h3>Associate your @ViewBag.LoginProvider account</h3>
+
+		@using (Html.BeginForm("ExternalLoginConfirmation", "Account", new { ReturnUrl = ViewBag.ReturnUrl }, FormMethod.Post, true, new { @class = "form-horizontal", role = "form" }))
+		{
+			@Html.AntiForgeryToken()
+			<hr />
+			@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+			<p>
+				You've successfully authenticated with <strong>@ViewBag.LoginProvider</strong>.
+				Please enter the information below and click the Register button to finish logging in.
+			</p>
+			<div class="row">
+				@await Html.PartialAsync("_RegistrationPartial", Model)
+			</div>
+		}
+
+
+		@section Scripts {
+			<script src="@Url.ContentVersioned("/bundles/jqueryval.js")" defer></script>
+			<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+			<script src="@Url.ContentVersioned("/bundles/registration.js")" defer></script>
+			<script type="text/javascript" defer>
+				jQuery.LiveAddress( {
+						key: '@Configuration[ "SmartyStreetsKey" ]',
+						debug: false,
+						target: "US",
+						addresses: [{
+								id: 'mailing',		// IDs are not part of the address
+								address1: '#AddressLine1',
+								address2: '#AddressLine2',	// Not all these fields are required
+								locality: '#City',
+								administrative_area: '#State',
+								postal_code: '#PostalCode'/*,
+								country: '#Country'*/
+						}]
+				} );
+				$( '#Email' )
+					.change( function () {
+						if ( $( '#KeepUsernameInSyncWithEmailAddress' ).prop( 'checked' ) ) {
+							var tbUserName = $( '#UserName' );
+							//if ( tbUserName.val() === $( this ).data( 'oldVal' ) ) {
+								tbUserName.val( $( this ).val() );
+							//}
+						}
+					} )
+					.focus( function () {
+						$( this ).data( 'oldVal', $( this ).val() );
+					} );
+				$( '#KeepUsernameInSyncWithEmailAddress' )
+					.change( function () {
+						$( '#UserName' ).prop( "readonly", $( this ).prop( 'checked' ) )
+						if ( $( this ).prop( 'checked' ) ) {
+							$( '#UserName' ).val( $( '#Email' ).val() );
+						}
+					} );
+				$( '#KeepUsernameInSyncWithEmailAddress' ).prop( 'checked', @((!User.Identity.IsAuthenticated).ToString().ToLower()) );
+				$( '#UserName' ).prop( 'readonly', @((!User.Identity.IsAuthenticated).ToString().ToLower()) );
+			</script>
+		}
+
+
+	</div>
+</section>

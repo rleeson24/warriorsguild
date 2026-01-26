@@ -1,0 +1,359 @@
+﻿#payment-form {
+	display: -ms-flexbox;
+	display: flex;
+	-ms-flex-wrap: wrap;
+	flex-wrap: wrap;
+	position: relative;
+	width: 100%;
+	max-width: 600px;
+	padding: 20px;
+	margin: 0 auto 20px auto;
+	transition-property: opacity, transform;
+	transition-duration: 0.35s;
+	transition-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+	#payment-form .example {
+		width: 100%;
+		-ms-flex-align: center;
+		align-items: center;
+		border-radius: 4px;
+		box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+		padding: 80px 0px;
+		margin-right: -20px;
+	}
+
+@media (min-width: 670px) {
+	#payment-form .example {
+		padding: 40px;
+	}
+}
+
+#payment-form .example.submitted form,
+#payment-form .example.submitting form {
+	opacity: 0;
+	transform: scale(0.9);
+	pointer-events: none;
+}
+
+#payment-form .example.submitted .success,
+#payment-form .example.submitting .success {
+	pointer-events: all;
+	border-radius: 20px;
+}
+
+	#payment-form .example.submitting .success .icon,
+	#payment-form .example.submitting .success .busyTitle {
+		opacity: 1;
+	}
+	#payment-form .example.submitted .success .busyTitle {
+		display: none;
+	}
+
+	#payment-form .example.submitted .success > * {
+		opacity: 1;
+		transform: none !important;
+	}
+
+	#payment-form .example.submitted .success > :nth-child(2) {
+		transition-delay: 0.1s;
+	}
+
+	#payment-form .example.submitted .success > :nth-child(3) {
+		transition-delay: 0.2s;
+	}
+
+	#payment-form .example.submitted .success > :nth-child(4) {
+		transition-delay: 0.3s;
+	}
+
+	#payment-form .example.submitted .success .icon .border,
+	#payment-form .example.submitted .success .icon .checkmark {
+		opacity: 1;
+		stroke-dashoffset: 0 !important;
+	}
+
+
+#payment-form .example .error {
+	display: -ms-flexbox;
+	display: flex;
+	-ms-flex-pack: center;
+	justify-content: center;
+	/*position: absolute;*/
+	width: 100%;
+	top: 100%;
+	margin-top: 20px;
+	left: 0;
+	padding: 0 15px;
+	font-size: 13px !important;
+	opacity: 0;
+	transform: translateY(10px);
+	transition-property: opacity, transform;
+	transition-duration: 0.35s;
+	transition-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+	#payment-form .example .error.visible {
+		opacity: 1;
+		transform: none;
+	}
+
+	#payment-form .example .error .message {
+		font-size: inherit;
+	}
+
+	#payment-form .example .error svg {
+		-ms-flex-negative: 0;
+		flex-shrink: 0;
+		margin-top: -1px;
+		margin-right: 10px;
+	}
+
+#payment-form .example .success {
+	display: -ms-flexbox;
+	display: flex;
+	-ms-flex-direction: column;
+	flex-direction: column;
+	-ms-flex-align: center;
+	align-items: center;
+	-ms-flex-pack: center;
+	justify-content: center;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top: 0;
+	left: 0;
+	padding: 10px;
+	text-align: center;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+@media (min-width: 670px) {
+	#payment-form .example .success {
+		padding: 40px;
+	}
+}
+
+#payment-form .example .success > * {
+	transition-property: opacity, transform;
+	transition-duration: 0.35s;
+	transition-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+	opacity: 0;
+	transform: translateY(50px);
+}
+
+#payment-form .example .success .icon {
+	margin: 15px 0 30px;
+	transform: translateY(70px) scale(0.75);
+}
+
+	#payment-form .example .success .icon svg {
+		will-change: transform;
+	}
+
+	#payment-form .example .success .icon .border {
+		stroke-dasharray: 251;
+		stroke-dashoffset: 62.75;
+		transform-origin: 50% 50%;
+		transition: stroke-dashoffset 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+		animation: spin 1s linear infinite;
+	}
+
+	#payment-form .example .success .icon .checkmark {
+		stroke-dasharray: 60;
+		stroke-dashoffset: 60;
+		transition: stroke-dashoffset 0.35s cubic-bezier(0.165, 0.84, 0.44, 1) 0.35s;
+	}
+
+#payment-form .example .success .title {
+	font-size: 17px;
+	font-weight: 500;
+	margin-bottom: 8px;
+}
+
+#payment-form .example .success .message {
+	font-size: 14px;
+	font-weight: 400;
+	margin-bottom: 25px;
+	line-height: 1.6em;
+}
+
+	#payment-form .example .success .message span {
+		font-size: inherit;
+	}
+
+#payment-form .example .success .reset:active {
+	transition-duration: 0.15s;
+	transition-delay: 0s;
+	opacity: 0.65;
+}
+
+#payment-form .example .success .reset svg {
+	will-change: transform;
+}
+
+
+
+
+	/*.example.example1 * {
+		font-family: Roboto, Open Sans, Segoe UI, sans-serif;
+		font-size: 16px;
+		font-weight: 500;
+	}
+
+	.example.example1 fieldset {
+		margin: 0 15px 20px;
+		padding: 0;
+		border-style: none;
+		background-color: #7795f8;
+		box-shadow: 0 6px 9px rgba(50, 50, 93, 0.06), 0 2px 5px rgba(0, 0, 0, 0.08), inset 0 1px 0 #829fff;
+		border-radius: 4px;
+	}
+
+	.example.example1 .row {
+		display: -ms-flexbox;
+		display: flex;
+		-ms-flex-align: center;
+		align-items: center;
+		margin-left: 15px;
+	}
+
+		.example.example1 .row + .row {
+			border-top: 1px solid #819efc;
+		}
+
+	.example.example1 label {
+		width: 15%;
+		min-width: 70px;
+		padding: 11px 0;
+		color: #c4f0ff;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.example.example1 input, .example.example1 button {
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+		outline: none;
+		border-style: none;
+	}
+
+		.example.example1 input:-webkit-autofill {
+			-webkit-text-fill-color: #fce883;
+			transition: background-color 100000000s;
+			-webkit-animation: 1ms void-animation-out;
+		}
+
+	.example.example1 .StripeElement--webkit-autofill {
+		background: transparent !important;
+	}
+
+	.example.example1 .StripeElement {
+		width: 100%;
+		padding: 11px 15px 11px 0;
+	}
+
+	.example.example1 input {
+		width: 100%;
+		padding: 11px 15px 11px 0;
+		color: #fff;
+		background-color: transparent;
+		-webkit-animation: 1ms void-animation-out;
+	}
+
+		.example.example1 input::-webkit-input-placeholder {
+			color: #87bbfd;
+		}
+
+		.example.example1 input::-moz-placeholder {
+			color: #87bbfd;
+		}
+
+		.example.example1 input:-ms-input-placeholder {
+			color: #87bbfd;
+		}
+
+	.example.example1 button {
+		display: block;
+		width: calc(100% - 30px);
+		height: 40px;
+		margin: 40px 15px 0;
+		background-color: #f6a4eb;
+		box-shadow: 0 6px 9px rgba(50, 50, 93, 0.06), 0 2px 5px rgba(0, 0, 0, 0.08), inset 0 1px 0 #ffb9f6;
+		border-radius: 4px;
+		color: #fff;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+		.example.example1 button:active {
+			background-color: #d782d9;
+			box-shadow: 0 6px 9px rgba(50, 50, 93, 0.06), 0 2px 5px rgba(0, 0, 0, 0.08), inset 0 1px 0 #e298d8;
+		}
+
+	.example.example1 .error svg .base {
+		fill: #fff;
+	}
+
+	.example.example1 .error svg .glyph {
+		fill: #6772e5;
+	}
+
+	.example.example1 .error .message {
+		color: #fff;
+	}
+
+	.example.example1 .success .icon .border {
+		stroke: #87bbfd;
+	}
+
+	.example.example1 .success .icon .checkmark {
+		stroke: #fff;
+	}
+
+	.example.example1 .success .title {
+		color: #fff;
+	}
+
+	.example.example1 .success .message {
+		color: #9cdbff;
+	}
+
+	.example.example1 .success .reset path {
+		fill: #fff;
+	}*/
+
+
+
+
+/**
+ * The CSS shown here will not be introduced in the Quickstart guide, but shows
+ * how you can use CSS to style your Element's container.
+ */
+.StripeElement {
+	background-color: white;
+	height: 40px;
+	padding: 10px 12px;
+	border-radius: 4px;
+	border: 1px solid transparent;
+	box-shadow: 0 1px 3px 0 #e6ebf1;
+	-webkit-transition: box-shadow 150ms ease;
+	-moz-transition: box-shadow 150ms ease;
+	-o-transition: box-shadow 150ms ease;
+	transition: box-shadow 150ms ease;
+}
+
+.StripeElement--focus {
+	box-shadow: 0 1px 3px 0 #cfd7df;
+}
+
+.StripeElement--invalid {
+	border-color: #fa755a;
+}
+
+.StripeElement--webkit-autofill {
+	background-color: #fefde5 !important;
+}

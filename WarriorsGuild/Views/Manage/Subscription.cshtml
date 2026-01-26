@@ -1,0 +1,383 @@
+﻿@model WarriorsGuild.Models.ManageSubscriptionViewModel
+@{
+	ViewBag.Title = "Manage Subscription";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+	var StripeKey = ViewBag.StripeKey;
+	var UserIsAdmin = User.IsInRole("Admin");
+	var UserIsAdminString = UserIsAdmin.ToString().ToLower();
+	var UserIsGuardian = User.IsInRole("Guardian");
+	var UserIsGuardianString = UserIsGuardian.ToString().ToLower();
+}
+@using WarriorsGuild.Data.Models.Payments
+@using WarriorsGuild.Utilities
+
+<link href="@Url.ContentVersioned("/css/stripe.css")" rel="stylesheet">
+
+<!-- ko with: subscriptions -->
+<section>
+	<div data-bind="with: dataModel.CurrentSubscription(), visible: dataModel.CurrentSubscription()" style="display:none;">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12 text-center">
+					<h1>Current Subscription</h1>
+				</div>
+			</div>
+			<div class="row text-center">
+				<h2 style="font-weight:bold" data-bind="text: description"></h2>
+			</div>
+			<div class="row">
+				<div class="col-md-offset-3 col-md-3 text-center">
+					<div>Total Guardians Allowed</div>
+					<h3 style="font-weight: bold" data-bind="text: additionalGuardians + numberOfGuardians"></h3>
+				</div>
+				<div class="col-md-3 text-center">
+					<div>Total Warriors Allowed</div>
+					<h3 style="font-weight: bold" data-bind="text: additionalWarriors + numberOfWarriors"></h3>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-4 text-center">
+					<div>Billing Frequency</div>
+					<h3 style="font-weight: bold" data-bind="text: frequency == 0 ? 'Monthly' : 'Yearly'"></h3>
+				</div>
+				<div class="col-md-4 text-center">
+					<div>Next Payment Due</div>
+					<h2 style="font-weight: bold" data-bind="text: nextPaymentDue.toLocaleDateString()"></h2>
+				</div>
+				<div class="col-md-4 text-center">
+					<div>Total <span data-bind="text: (frequency == 0 ? 'Monthly' : 'Yearly')"></span> Cost</div>
+					<h2 style="font-weight: bold" data-bind="text: totalPeriodicCharge.formatted()"></h2>
+				</div>
+			</div>
+			<div class="row text-center" data-bind="if: guardianUsers.length > 0">
+				<div class="col-xs-12">
+					<h3>Guardians (<span data-bind="text: guardianUsers.length"></span>)</h3>
+				</div>
+				@*<div class="clearfix"></div>
+					<ul class="list-group list-inline list-unstyled card">
+						<li class="card-container" data-bind="foreach: guardianUsers">
+							<span class="glyphicon glyphicon-remove"></span>
+							<h3 data-bind="text: firstName + ' ' + lastName"></h3>
+							<div data-bind="visible: isGuardian">Guardian</div>
+							<div data-bind="visible: isWarrior">Warrior</div>
+						</li>
+					</ul>*@
+				<!-- ko foreach: guardianUsers -->
+				<div class="col-xs-12 col-md-3">
+					<div class="card card-container">
+						<span class="glyphicon glyphicon-remove"></span>
+						<h5 data-bind="text: firstName + ' ' + lastName"></h5>
+						<h6 data-bind="visible: isGuardian">Guardian</h6>
+						<h6 data-bind="visible: isWarrior">Warrior</h6>
+					</div>
+				</div>
+				<!-- /ko -->
+			</div>
+			<div class="row text-center" data-bind="if: warriorUsers.length > 0">
+				<div class="col-xs-12">
+					<h3>Warriors (<span data-bind="text: warriorUsers.length"></span>)</h3>
+				</div>
+				<div class="clearfix"></div>
+				<!-- ko foreach: warriorUsers -->
+				<div class="col-xs-12 col-md-3">
+					<div class="card card-container">
+						<span class="glyphicon glyphicon-remove"></span>
+						<h5 data-bind="text: firstName + ' ' + lastName"></h5>
+						<h6 data-bind="visible: isGuardian">Guardian</h6>
+						<h6 data-bind="visible: isWarrior">Warrior</h6>
+					</div>
+				</div>
+				<!-- /ko -->
+			</div>
+		</div>
+	</div>
+</section>
+
+<section>
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12 text-center">
+				<h3 data-bind="text: dataModel.CurrentSubscription() ? 'Update Subscription' : 'Create Subscription'"></h3>
+
+				<div id="retrievingOptionsMessage" class="alert alert-info fade in" data-bind="visible: dataModel.RetrievingPlans()" style="display:none">
+					<img class="icon-spin" style="width: 1em; height: 1em;" src="~/images/busy.gif" />	Please wait as we retrieve existing payment plans.
+				</div>
+				<div id="noOptionsMessage" class="alert alert-danger fade in" data-bind="visible: !dataModel.RetrievingPlans() && dataModel.PriceOptions().length === 0" style="display:none;">
+					No Payment Plans were found.  Please try again.  If you continue to see this message, please contact the site administrator for assistance.
+				</div>
+				<div class="form-group" data-bind="visible: !dataModel.RetrievingPlans()" style="display:none;">
+					<label class="control-label">Choose plan:</label>
+					<select class="form-control" data-bind="value: dataModel.SelectedPriceOption, options: dataModel.PriceOptions, optionsText: 'description', optionsCaption: 'Choose...'" style="margin-bottom: 2em;"></select>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<div class="container">
+	<section id="itemsToPurchase">
+		<div data-bind="visible: dataModel.SelectedPriceOption() != null" style="display:none;">
+			<!-- ko with: dataModel.SelectedPriceOption -->
+			<div class="row">
+				<div class="col-md-12">
+					<div class="invoice panel panel-default">
+						<div class="panel-heading">
+							<h3 class="text-center"><strong>Order summary</strong></h3>
+						</div>
+						<div class="panel-body">
+							<div class="table-responsive">
+								<table class="table table-condensed">
+									<thead>
+										<tr>
+											<td colspan="2"><strong>Item Name</strong></td>
+											<td class="text-center"><strong>Item Price</strong></td>
+											<td class="text-center"><strong>Item Quantity</strong></td>
+											<td class="text-right"><strong>Total</strong></td>
+										</tr>
+									</thead>
+									<tbody>
+										<tr>
+											<td colspan="2">
+												<div data-bind="text: description">Samsung Galaxy</div>
+												<div style="padding-left: 5em" data-bind="visible: hasTrialPeriod, text: 'Trial Period: ' + trialPeriodLength + (frequency == 0 ? ' Month' : ' Year') + (trialPeriodLength > 1 ? 's' : '')"></div>
+												<div style="padding-left: 5em" data-bind="text: numberOfGuardians + ' Guardians'"></div>
+												<div style="padding-left: 5em" data-bind="text: numberOfWarriors + ' Warriors'"></div>
+												<!-- ko foreach: perks -->
+												<div style="padding-left: 5em" data-bind="text: quantity + ' ' + description"></div>
+												<!-- /ko -->
+											</td>
+											<td class="text-center" data-bind="text: formattedCharge.formatted()">$900</td>
+											<td class="text-center">1</td>
+											<td class="text-right" data-bind="text: formattedCharge.formatted()">$900</td>
+										</tr>
+										<!-- ko with: additionalGuardianPlan -->
+										<tr>
+											<td style="width:2em"></td>
+											<td data-bind="text: description">Samsung Galaxy S5 Extra Battery</td>
+											<td class="text-center" data-bind="text: formattedCharge.formatted()">$30.00</td>
+											<td class="text-center"><div><input type="number" class="form-control" data-bind="value: quantity" min="0" max="50" /></div></td>
+											<td class="text-right" data-bind="text: totalCharge.formatted()">$30.00</td>
+										</tr>
+										<!-- /ko -->
+										<!-- ko with: additionalWarriorPlan -->
+										<tr>
+											<td></td>
+											<td data-bind="text: description">Samsung Galaxy S5 Extra Battery</td>
+											<td class="text-center" data-bind="text: formattedCharge.formatted()">$30.00</td>
+											<td class="text-center"><input type="number" class="form-control" data-bind="value: quantity" min="0" max="50" /></td>
+											<td class="text-right" data-bind="text: totalCharge.formatted()">$30.00</td>
+										</tr>
+										<!-- /ko -->
+										<tr>
+											<td></td>
+											<td class="emptyrow"><i class="fa fa-barcode iconbig"></i></td>
+											<td class="emptyrow"></td>
+											<td class="emptyrow text-center"><strong>Subtotal</strong></td>
+											<td class="emptyrow text-right total-amount" data-bind="text: subTotal.formatted()">$978.00</td>
+										</tr>
+										<!-- ko if: setupFee > 0 -->
+										<tr>
+											<td colspan="2">
+												<div>One-time Setup Fee</div>
+											</td>
+											<td class="text-center"></td>
+											<td class="text-center"></td>
+											<td class="text-right" data-bind="text: formattedSetupFee.formatted()">$900</td>
+										</tr>
+										<!-- /ko -->
+										<tr>
+											<td></td>
+											<td class="emptyrow"><i class="fa fa-barcode iconbig"></i></td>
+											<td class="emptyrow"></td>
+											<td class="emptyrow text-center"><strong>Total</strong></td>
+											<td class="emptyrow text-right total-amount" data-bind="text: totalCharge.formatted()">$978.00</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- /ko -->
+			<div id="payment-form">
+				<div class="example">
+					<form method="post" data-bind="visible: dataModel.SelectedPriceOption() != null" style="display:flex;">
+						<div class="col-xs-12">
+							@Html.HiddenFor(m => m.StripePublishableKey)
+							<div class="form-row center">
+								<label for="card-element">
+									Credit or debit card
+								</label>
+								<div id="card-element">
+									 @*A Stripe Element will be inserted here.*@ 
+								</div>
+
+								 @*Used to display form errors.*@ 
+								<div id="card-errors" class="alert-danger" role="alert"></div>
+							</div>
+						</div>
+						<div class="col-xs-12">
+							<button class="form-control">Submit Payment</button>
+						</div>
+						<div class="error" role="alert">
+							<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 17 17">
+								<path class="base" fill="#000" d="M8.5,17 C3.80557963,17 0,13.1944204 0,8.5 C0,3.80557963 3.80557963,0 8.5,0 C13.1944204,0 17,3.80557963 17,8.5 C17,13.1944204 13.1944204,17 8.5,17 Z" />
+								<path class="glyph" fill="#FFF" d="M8.5,7.29791847 L6.12604076,4.92395924 C5.79409512,4.59201359 5.25590488,4.59201359 4.92395924,4.92395924 C4.59201359,5.25590488 4.59201359,5.79409512 4.92395924,6.12604076 L7.29791847,8.5 L4.92395924,10.8739592 C4.59201359,11.2059049 4.59201359,11.7440951 4.92395924,12.0760408 C5.25590488,12.4079864 5.79409512,12.4079864 6.12604076,12.0760408 L8.5,9.70208153 L10.8739592,12.0760408 C11.2059049,12.4079864 11.7440951,12.4079864 12.0760408,12.0760408 C12.4079864,11.7440951 12.4079864,11.2059049 12.0760408,10.8739592 L9.70208153,8.5 L12.0760408,6.12604076 C12.4079864,5.79409512 12.4079864,5.25590488 12.0760408,4.92395924 C11.7440951,4.59201359 11.2059049,4.59201359 10.8739592,4.92395924 L8.5,7.29791847 L8.5,7.29791847 Z" />
+							</svg>
+							<span class="message"></span>
+						</div>
+					</form>
+					<div class="success">
+						<div class="icon">
+							<svg width="84px" height="84px" viewBox="0 0 84 84" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+								<circle class="border" cx="42" cy="42" r="40" stroke-linecap="round" stroke-width="4" stroke="#000" fill="none" />
+								<path class="checkmark" stroke-linecap="round" stroke-linejoin="round" d="M23.375 42.5488281 36.8840688 56.0578969 64.891932 28.0500338" stroke-width="4" stroke="#000" fill="none" />
+							</svg>
+						</div>
+						<h3 class="busyTitle" data-tid="elements_examples.success.busyTitle">Processing Payment...</h3>
+						<h3 class="title" data-tid="elements_examples.success.title">Payment successful</h3>
+						<p class="message"><span data-tid="elements_examples.success.message">Your subscription was successfully created.  Enjoy your Warriors Guild experience!</span></p>
+						<a class="btn btn-lg btn-addnew" data-tid="elements_examples.success.title" asp-controller="Manage" asp-action="ManageProfiles">Add Warrior(s)</a>
+						@*<a class="reset" href="#">
+								<svg width="32px" height="32px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+									<path fill="#000000" d="M15,7.05492878 C10.5000495,7.55237307 7,11.3674463 7,16 C7,20.9705627 11.0294373,25 16,25 C20.9705627,25 25,20.9705627 25,16 C25,15.3627484 24.4834055,14.8461538 23.8461538,14.8461538 C23.2089022,14.8461538 22.6923077,15.3627484 22.6923077,16 C22.6923077,19.6960595 19.6960595,22.6923077 16,22.6923077 C12.3039405,22.6923077 9.30769231,19.6960595 9.30769231,16 C9.30769231,12.3039405 12.3039405,9.30769231 16,9.30769231 L16,12.0841673 C16,12.1800431 16.0275652,12.2738974 16.0794108,12.354546 C16.2287368,12.5868311 16.5380938,12.6540826 16.7703788,12.5047565 L22.3457501,8.92058924 L22.3457501,8.92058924 C22.4060014,8.88185624 22.4572275,8.83063012 22.4959605,8.7703788 C22.6452866,8.53809377 22.5780351,8.22873685 22.3457501,8.07941076 L22.3457501,8.07941076 L16.7703788,4.49524351 C16.6897301,4.44339794 16.5958758,4.41583275 16.5,4.41583275 C16.2238576,4.41583275 16,4.63969037 16,4.91583275 L16,7 L15,7 L15,7.05492878 Z M16,32 C7.163444,32 0,24.836556 0,16 C0,7.163444 7.163444,0 16,0 C24.836556,0 32,7.163444 32,16 C32,24.836556 24.836556,32 16,32 Z" />
+								</svg>
+							</a>*@
+					</div>
+					<div class="center">
+						<a href="http://www.stripe.com"><img src="~/images/powered_by_stripe.png" /></a>
+						<div>The Stripe name and logos are trademarks or service marks of Stripe, Inc. or its affiliates in the U.S. and other countries. Other names may be trademarks of their respective owners.</div>
+					</div>
+				</div>
+			</div>
+			<div class="clearfix"></div>
+		</div>
+	</section>
+
+	<section>
+		<div class="row text-center" data-bind="visible: dataModel.CurrentSubscription(), with: dataModel.CurrentSubscription()" style="display:none;">
+			<div class="col-xs-12">
+				<button class="btn btn-default btn-sm" data-toggle="modal" data-target="#unsubscribeModel">Unsubscribe From Warriors Guild</button>
+				<div class="modal fade" id="unsubscribeModel" tabindex="-1" role="dialog">
+					<div class="modal-dialog" role="document">
+						<div class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+								<h3 class="modal-title">Confirm Unsubscribe</h3>
+							</div>
+							<div class="modal-body">
+								<p>To finalize the unusbscribe action, click the Unsubscribe button.</p>
+								<p>You and other Guardians and Warriors on your account will lose access to the majority of site functionality, but will not lose their data.</p>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+								<button type="button" class="btn btn-primary" data-dismiss="modal" data-bind="click: $parents[0].unsubscribe">Unsubscribe</button>
+							</div>
+						</div><!-- /.modal-content -->
+					</div><!-- /.modal-dialog -->
+				</div><!-- /.modal -->
+			</div>
+		</div>
+	</section>
+</div>
+<!-- /ko -->
+
+<script>
+	var stripePublishableKey = '@Model.StripePublishableKey';
+
+	//paypal.Button.render( {
+
+	//	env: 'sandbox', // Or 'sandbox'
+
+	//	client: {
+	//		sandbox: 'xxxxxxxxx',
+	//		production: 'xxxxxxxxx'
+	//	},
+
+	//	commit: true, // Show a 'Pay Now' button
+
+	//	payment: function ( data, actions ) {
+	//		return actions.payment.create( {
+	//			payment: {
+	//				transactions: [
+	//					{
+	//						amount: { total: '1.00', currency: 'USD' }
+	//					}
+	//				]
+	//			}
+	//		} );
+	//	},
+
+	//	onAuthorize: function ( data, actions ) {
+	//		return actions.payment.execute().then( function ( payment ) {
+
+	//			// The payment is complete!
+	//			// You can now show a confirmation message to the customer
+	//		} );
+	//	}
+
+	//}, '#paypal-button-monthly' );
+
+	//paypal.Button.render( {
+
+	//	env: 'sandbox', // Or 'sandbox'
+
+	//	client: {
+	//		sandbox: 'xxxxxxxxx',
+	//		production: 'xxxxxxxxx'
+	//	},
+
+	//	commit: true, // Show a 'Pay Now' button
+
+	//	payment: function ( data, actions ) {
+	//		return actions.payment.create( {
+	//			payment: {
+	//				transactions: [
+	//					{
+	//						amount: { total: '1.00', currency: 'USD' }
+	//					}
+	//				]
+	//			}
+	//		} );
+	//	},
+
+	//	onAuthorize: function ( data, actions ) {
+	//		return actions.payment.execute().then( function ( payment ) {
+
+	//			// The payment is complete!
+	//			// You can now show a confirmation message to the customer
+	//		} );
+	//	}
+
+	//}, '#paypal-button-yearly' );
+</script>
+
+<script>
+	var paymentUrls = @Html.Raw(Json.Serialize(Model.Urls));
+	var priceOptionStates = @Html.Raw( Json.Serialize( Enum.GetNames( typeof( BillingPlanState ) ) ) );
+	var isGuardian = @UserIsGuardianString;
+	var isAdmin = @UserIsAdminString;
+</script>
+
+
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<environment exclude="Development">
+		<script src="@Url.ContentVersioned("/bundles/subscriptions.js")" defer></script>
+	</environment>
+	<environment include="Development">
+		<script src="@Url.ContentVersioned("/Scripts/main.js")" defer></script>
+		<script src="@Url.ContentVersioned("/lib/sammy.js/sammy.min.js")" defer></script>
+		<script src="@Url.ContentVersioned("/lib/jqueryui/jquery-ui.min.js")" defer></script>
+		<script src="@Url.ContentVersioned("/lib/jquery.form/jquery.form.min.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/common.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/app.datamodel.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/app.viewmodel.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/CustomObservables/CustomObservables.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/payments.datamodels.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/wg.stripe.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/subscriptions.viewmodel.js")" defer></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/_run.js")" defer></script>
+	</environment>
+}

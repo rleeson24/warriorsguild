@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
+	<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.23" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\WarriorsGuild.FileUpload\WarriorsGuild.FileUpload.csproj" />
+  </ItemGroup>
+
+</Project>

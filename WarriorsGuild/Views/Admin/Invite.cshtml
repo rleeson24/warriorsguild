@@ -1,0 +1,38 @@
+﻿
+@{
+	ViewBag.Title = "Invite to Trial | Warriors Guild";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@using WarriorsGuild.Utilities 
+
+<!-- ko with: inviteToTrial -->
+<section style="padding-bottom: 50px;">
+	<div class="container">
+		<h2>Invite to Trial</h2>
+		<div class="row visible-md visible-lg" style="padding-top: 50px;">
+		</div>
+		<div class="row">
+			<label class="col-md-2 control-label" for="Email">Email</label>
+			<div class="col-md-4">
+				<input class="form-control" data-val="true" data-val-email="The Email field is not a valid e-mail address." id="Email" name="Email" type="text" value="" data-bind="value: dataModel.emailAddress">
+				<span class="field-validation-valid text-danger" data-valmsg-for="Email" data-valmsg-replace="true"></span>
+			</div>
+		</div>
+		<div class="row visible-md visible-lg" style="padding-top: 50px;">
+		</div>
+		<div class="form-group">
+			<div class="col-md-offset-2 col-md-10">
+				<input type="button" class="btn btn-default" value="Invite" data-bind="click: invite">
+			</div>
+		</div>
+	</div>
+</section><!--/#blog-view-->
+<!-- /ko -->
+
+<script>
+	var homeUrls = @Html.Raw( Json.Serialize( Model ) );
+</script>
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/invite.js")" defer></script>
+}

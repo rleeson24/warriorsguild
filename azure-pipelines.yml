@@ -1,0 +1,75 @@
+# Variable 'SQLDbContext' was defined in the Variables tab
+variables:
+- name: BuildParameters.solution
+  value: '**\*.sln'
+- name: BuildParameters.ArtifactName
+  value: drop
+- name: buildPlatform
+  value: 'Any CPU'
+- name: buildConfiguration
+  value: 'Release'
+- name: SQLDbContext
+  value: 'ApplicationDbContext'
+
+trigger:
+  branches:
+    include:
+    - refs/heads/master
+  paths:
+    include:
+    - /
+  batch: True
+name: $(date:yyyyMMdd)$(rev:.r)
+jobs:
+- job: Phase_1
+  displayName: Agent job 1
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'windows-latest'
+
+  steps:
+  - checkout: self
+  - task: NuGetToolInstaller@1
+    displayName: Use NuGet 5.8.0
+    inputs:
+      versionSpec: 5.8.0
+  - task: NuGetCommand@2
+    displayName: NuGet restore
+    inputs:
+      solution: $(BuildParameters.solution)
+  - task: Npm@1
+    displayName: npm install
+    inputs:
+      workingDir: WarriorsGuild
+      verbose: false
+  - task: VSBuild@1
+    displayName: Build solution
+    inputs:
+      solution: $(BuildParameters.solution)
+      msbuildArgs: /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"
+      platform: $(BuildPlatform)
+      configuration: $(BuildConfiguration)
+  - task: VSTest@2
+    displayName: Test Assemblies
+    inputs:
+      testAssemblyVer2: >-
+        **\$(BuildConfiguration)\*test*.dll
+
+        !**\obj\**
+      platform: $(BuildPlatform)
+      configuration: $(BuildConfiguration)
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        dotnet tool install --global dotnet-ef --version 6.0.21
+        dotnet tool restore
+        dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/migrations_script.sql --context $(SQLDbContext) --idempotent
+        dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/is4_config_migrations_script.sql --context ConfigurationDbContext --idempotent --no-build
+        dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/is4_pg_migrations_script.sql --context PersistedGrantDbContext --idempotent --no-build
+      workingDirectory: WarriorsGuild.Data
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: '$(BuildParameters.ArtifactName)'
+      publishLocation: 'Container'

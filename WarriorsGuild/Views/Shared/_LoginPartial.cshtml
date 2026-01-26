@@ -1,0 +1,106 @@
+﻿@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Identity
+@using WarriorsGuild.Data.Models
+@using WarriorsGuild.Models.Account
+@using WarriorsGuild.Models
+@using System.Security.Claims
+
+@{
+	var UserIsWarrior = User.IsInRole("Warrior").ToString().ToLower();
+	var UserIsGuardian = User.IsInRole("Guardian").ToString().ToLower();
+	var UserIsAdmin = User.IsInRole("Warrior").ToString().ToLower();
+	var previewMode = SessionManager.PreviewMode;
+}
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject WarriorsGuild.Helpers.Utilities.ISessionManager SessionManager
+
+<script>
+	var userIsWarrior = @User.IsInRole( "Warrior" ).ToString().ToLower();
+	var lockEntry = !userIsWarrior && '@(SessionManager.UserIdForStatuses)' !== '';
+	var userIsGuardian = @User.IsInRole( "Guardian" ).ToString().ToLower();
+	var userIsAdmin = @User.IsInRole( "Admin" ).ToString().ToLower();
+	var warriorDropDownItems = @Html.Raw( Newtonsoft.Json.JsonConvert.SerializeObject( ViewBag.Warriors as IEnumerable<WarriorDropDownItem>,
+		new Newtonsoft.Json.JsonSerializerSettings
+		{
+			ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
+		} ) );
+	var selectedWarrior = null;
+	if (warriorDropDownItems) {
+		for (var i = 0; i < warriorDropDownItems.length; i++) {
+			if (warriorDropDownItems[i].id == '@(SessionManager.UserIdForStatuses)') {
+				selectedWarrior = warriorDropDownItems[i];
+				break;
+			}
+		}
+		var aWarriorNeedsApproval = warriorDropDownItems.some(w => w.needsApproval);
+	}
+	var userIsAuthenticated = @User.Identity.IsAuthenticated.ToString().ToLower();
+	var previewMode = @(previewMode.ToString().ToLower());
+</script>
+
+@if (SignInManager.IsSignedIn(User))
+{
+	using (Html.BeginForm("LogOut", "Account", new { area = "" }, FormMethod.Post, true, new { id = "logoutForm", @class = "navbar-right" }))
+	{
+		<ul class="nav navbar-nav navbar-right">
+			<li class="dropdown">
+				<a data-toggle="dropdown" class="dropdown-toggle" href="#">
+					<i class="bi bi-bell-fill" style="display:none;" data-bind="visible: aWarriorNeedsApproval"></i>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bell-fill" viewBox="0 0 16 16" style="display:none;" data-bind="visible: aWarriorNeedsApproval">
+						<path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"></path>
+					</svg>
+					Hello @User.FindFirstValue(ClaimTypes.GivenName)! <b class="caret"></b></a>
+				<ul class="dropdown-menu" role="menu">
+					<!-- ko foreach: { data: dataModel.WarriorDropDownItems, as: 'warrior' } -->
+					<!--<li role="listitem" data-bind="css: { active: $parent.dataModel.selectedWarrior() && warrior.id === $parent.dataModel.selectedWarrior().id }">
+						<a data-bind="click: $parent.SetWarriorProfile" href="#">
+							<i class="bi bi-bell-fill" style="display:none" data-bind="visible: warrior.needsApproval"></i>
+							<span data-bind="text: warrior.name"></span>-->
+							<!-- ko if: $parent.dataModel.selectedWarrior() -->
+							<!--<img src="~/images/boy.png" style="height: 16px; width: 16px; float: right" data-bind="visible: warrior.id === $parent.dataModel.selectedWarrior().id" />-->
+							<!-- /ko -->
+						<!--</a>
+					</li>-->
+					<!-- /ko -->
+					<!-- ko if: dataModel.WarriorDropDownItems != null && dataModel.WarriorDropDownItems.length > 0 -->
+					<!--<li class="divider"></li>-->
+					<!-- /ko -->
+					@if (User.IsInRole("Admin"))
+					{
+						<li role="listitem">
+							<a data-bind="click: TogglePreviewMode" href="#">
+								Toggle Preview Mode
+								@if (previewMode)
+								{<img src="~/images/check.png" style="height:16px;" />}
+							</a>
+						</li>
+						<li role="listitem">@Html.ActionLink("Administration", "Index", "Admin", routeValues: new { area = "" }, htmlAttributes: new { title = "Admin" })</li>
+					}
+					@*<a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Manage</a>*@
+					<li role="listitem"><a class="nav-link text-dark" asp-controller="Manage" asp-action="Index" title="Account">Account</a></li>
+				</ul>
+			</li>
+			<li class="nav-item">
+				<form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+					<button type="submit" class="nav-link btn btn-link">Logout</button>
+				</form>
+			</li>
+			@*<li class="nav-item text-dark"><a href="javascript:sessionStorage.removeItem('accessToken');$('#logoutForm').submit();" class="nav-link">Log off</a></li>*@
+		</ul>
+	}
+}
+else
+{
+	<ul class="nav navbar-nav navbar-right">
+		@*<li class="nav-item">
+			<a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Register</a>
+		</li>*@
+		<li class="nav-item">
+			<a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
+			@*<a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>*@
+		</li>
+		@*<li>@Html.ActionLink("Register", "Register", "Account", routeValues: new { area = "" }, htmlAttributes: new { id = "registerLink" })</li>
+			<li>@Html.ActionLink("Log in", "Login", "Account", routeValues: new { area = "" }, htmlAttributes: new { id = "loginLink" })</li>*@
+	</ul>
+}

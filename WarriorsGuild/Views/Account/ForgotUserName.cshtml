@@ -1,0 +1,34 @@
+﻿@model WarriorsGuild.Models.Account.ForgotPasswordViewModel
+@{
+    ViewBag.Title = "Forgot your username?";
+}
+@using WarriorsGuild.Utilities 
+
+<section id="pricing">
+    <div class="container">
+        <h2>@ViewBag.Title</h2>
+
+        @using (Html.BeginForm("ForgotUserName", "Account", FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+        {
+            @Html.AntiForgeryToken()
+            <h4>Enter your email.</h4>
+            <hr />
+            @Html.ValidationSummary("", new { @class = "text-danger" })
+            <div class="form-group">
+                @Html.LabelFor(m => m.Email, new { @class = "col-md-2 control-label" })
+                <div class="col-md-4">
+                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <input type="submit" class="btn btn-default" value="Email Username" />
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@section Scripts {
+	<script src="@Url.ContentVersioned("/bundles/jqueryval.js")" defer></script>
+}

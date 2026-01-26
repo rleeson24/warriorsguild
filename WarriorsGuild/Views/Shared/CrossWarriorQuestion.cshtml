@@ -1,0 +1,11 @@
+﻿<div class="col-xs-12 text-left">
+	<p data-bind="text: question.text"></p>
+		<!-- ko if: showEntryField && hasActiveSubscription -->
+		<!-- ko if: !cross.warriorCompleted() || cross.editing() -->
+		<textarea class="form-control" data-bind="value: question.answer, enabled: cross.editing() && userIsWarrior"></textarea>
+		<!-- /ko -->
+		<!-- ko if: cross.warriorCompleted() && !cross.editing() -->
+		<p class="answer" data-bind="text: question.answer()"></p>
+		<!-- /ko -->
+		<!-- /ko -->
+</div>

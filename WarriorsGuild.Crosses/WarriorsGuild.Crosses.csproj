@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WarriorsGuild.Common\WarriorsGuild.Common.csproj" />
+    <ProjectReference Include="..\WarriorsGuild.Data\WarriorsGuild.Data.csproj" />
+    <ProjectReference Include="..\WarriorsGuild.Email\WarriorsGuild.Email.csproj" />
+    <ProjectReference Include="..\WarriorsGuild.Storage\WarriorsGuild.Storage.csproj" />
+  </ItemGroup>
+
+</Project>

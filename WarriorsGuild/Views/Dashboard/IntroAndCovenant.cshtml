@@ -1,0 +1,86 @@
+﻿@{
+	ViewBag.Title = "Introduction and Covenant | Warriors Guild";
+}
+@using WarriorsGuild.Utilities
+<!-- ko with: intro -->
+<section>
+	<div class="container">
+		<h2 class="text-center">Introduction and Covenant</h2>
+
+		<p class="text-success">@ViewBag.StatusMessage</p>
+		<div class="row">
+			<div class="col-sm-6 col-sm-offset-3 text-center">
+				<h3>Warrior's Guild Introduction And Covenant</h3>
+				<div style="overflow-y:scroll; height: 300px; margin: auto" data-bind="event: { scroll: introScroll }">
+					<p>
+						Congratulations! You are about to embark on your greatest adventure – your journey into
+						becoming a man through the Warriors Guild.
+					</p>
+					<p>
+						So what is the Warriors Guild? Well, a warrior is one who fights enemies, and a guild is a
+						group of people that have the same profession and get together in order to support each other.
+						Your enemy is the world that tells you to be just like everyone else, be safe and don’t take risks,
+						be a follower and not a leader, be afraid to learn new things, and ultimately be a wimp. But we are
+						chosen to be warriors and fight against this! So the Warriors Guild is simply a group of warriors
+						who have come together to help fight this common enemy.
+					</p>
+					<p>
+						The journey of the Warriors Guild allows you to advance through different ranks earning
+						many different rewards along the way. As you advance through each of the different ranks, you will
+						find that each rank gets a little more difficult. The highest rank you can earn is the Hero Rank.
+						When boys earn this rank, they are saying that they are ready to step up into Godly manhood.
+						In order to progress through the ranks, you will need to earn many different rewards called
+						Warrior Rings. During the days of the knights, warriors would battle each other. When one warrior
+						finally won the battle, he would take his defeated foe’s weapon, melt it down, and make a ring out
+						of it. He would then take that ring and wear it on his hand, in his hair, or in his beard as a symbol
+						of victory over a foe. Obviously, the more rings a warrior had, the greater the warrior. There are
+						many different warrior rings that you can choose from. Some of them will be required to obtain, if
+						you want to continue to advance through the ranks. Most of them are optional – some are more
+						serious and you will learn a lot, and some are just plain fun!
+					</p>
+					<p>
+						Another thing you will be required to earn are Crosses. Each Cross is earned by reading a
+						book of the Bible, taking notes on what you learn as you read it, and reporting what you learned to
+						your Guardian (*Your Guardian is whoever is helping you along your journey – probably your Dad,
+						but it could be another person that your parents trust). You will be able to choose any book of the
+						Bible that you want to read.
+					</p>
+					<p>
+						After you complete the requirements for each rank, you will participate in a Round Table.
+						This is a time for you and your Dad or Guardian to sit down and talk. It is a time for you to prove
+						that you have completed all the requirements for the rank and celebrate as you are promoted to
+						the next rank.
+					</p>
+					<p>
+						The Warriors Guild commitment to you is to provide you and your Guardian with the
+						resources necessary to aid you in your journey to Godly manhood. We also commit to pray for you
+						and your Guardian. We pray that you seek, find, and step into God’s will for your life by realizing
+						the gifts God has bestowed upon you and using them to fulfill His purposes for you.
+						By signing this covenant, you are giving your word as a man that you will give your very
+						best when completing the requirements. You vow to commit to the program with intentionality,
+						integrity, and determination. You agree you will diligently and earnestly seek out God’s will for
+						your life. You promise to always be open and honest with your Guardian. Lastly, you vow not to
+						conform to the norms of this world but will stand in the strength of your conviction and be a light
+						to all those God puts in front of you.
+					</p>
+					<p>Now it's time to armor up and prepare for battle young Warrior!</p>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-6 col-sm-offset-3">
+				<h3 class="control-label">Type your name to sign:</h3>
+				<input type="text" data-bind="value: dataModel.typedName, valueUpdate: 'input'" class="form-control" />
+				<button class="btn btn-lg btn-primary" data-bind="click: signCovenant, enable: dataModel.signEnabled() && !dataModel.Submitting()">
+					Sign Covenant
+				</button>
+			</div>
+		</div>
+	</div>
+</section>
+<!-- /ko -->
+
+@section Scripts {
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/intro.js")" defer></script>
+}

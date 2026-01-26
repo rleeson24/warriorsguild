@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "mssql1": {
+      "type": "mssql.local",
+      "connectionId": "DefaultConnection"
+    },
+    "appInsights1": {
+      "type": "appInsights.sdk"
+    },
+    "storage1": {
+      "secretStore": "LocalSecretsFile",
+      "type": "storage.emulator",
+      "connectionId": "BlobStorage:ConnectionString",
+      "dynamicId": null
+    }
+  }
+}

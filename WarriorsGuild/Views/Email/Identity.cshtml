@@ -1,0 +1,8 @@
+﻿@model System.String
+@{
+    ViewBag.Title = "Identity";
+    Layout = "~/Views/Email/EmailLayout.cshtml";
+}
+
+
+@(Html.Raw(Model.Replace( Environment.NewLine, "<br />" ) ))

@@ -1,0 +1,43 @@
+﻿<script type="text/html" id="edit-ring-requirements-template">
+	<p class="col-xs-12">Rearrange items by drag-and-drop</p>
+	<div class="row" data-bind="sortable: requirements" id="requirementsList">
+		<div class="col-xs-12 col-sm-12 col-md-offset-1 col-md-9 text-left editable-requirement">
+			<div class="row">
+				<div class="col-xs-1" style="font-size: 1.5em;" data-bind="text: $index() + 1"></div>
+				<div class="col-xs-11"><textarea class="form-control" data-bind="value: actionToComplete"></textarea></div>
+				<div class="col-xs-1"></div>
+				<div class="form-group">
+					<label class="col-xs-2 col-sm-1 col-form-label" style="padding-top: 5px" for="inputWeight">Weight:</label>
+					<div class="col-xs-3 col-sm-2"><input type="text" class="form-control" id="inputWeight" maxlength="3" data-bind="value: weight" /></div>
+				</div>
+				<div class="col-xs-4 col-sm-6 text-left">
+					<div class="col-xs-12 col-md-6">
+						<div class="check">
+							<div class="squaredThree">
+								<input type="checkbox" data-bind="attr: { id: 'rqChkRequireAttachment' + $index() },
+																	checked: requireAttachment" />
+								<label data-bind="attr: { for: 'rqChkRequireAttachment' + $index() }"></label>
+							</div>
+						</div>
+						<label data-bind="attr: { for: 'rqChkRequireAttachment' + $index() }">Require Attachment</label>
+					</div>
+				</div>
+				<div class="col-xs-2 col-sm-2 text-right">
+					<div class="btn-group">
+						<button type="button" class="btn btn-xs btn-danger" style="padding-top: 4px;" data-bind="click: function() { $parent.requirements.remove($data); }"><span class="glyphicon glyphicon-trash"></span></button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-12">
+			<button class="btn btn-xs btn-addnew" data-bind="click: addRequirement"><span class="glyphicon glyphicon-plus-sign"></span>&nbsp;Add New Requirement</button>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-12">
+			<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parent.updateRequirements(data, $parent.dataModel.RingsUrl); }">Save Changes</button>
+		</div>
+	</div>
+</script>

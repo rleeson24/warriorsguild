@@ -1,0 +1,185 @@
+﻿@using WarriorsGuild.Utilities 
+
+@{
+	var UserIsAdmin = User.IsInRole("Admin");
+	var UserIsAdminString = UserIsAdmin.ToString().ToLower();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<title>@ViewBag.Title</title>
+	<!--[if lt IE 9]>
+	<script src="@Url.ContentVersioned("/lib/html5shiv/html5shiv.min.js")"></script>
+	<script src="@Url.ContentVersioned("/lib/respond.js/respond.min.js")"></script>
+	<![endif]-->
+	<link rel="apple-touch-icon" sizes="60x60" href="/images/ico/apple-touch-icon-60x60.png?v=3e82mPRvPa">
+	<link rel="apple-touch-icon" sizes="76x76" href="/images/ico/apple-touch-icon-76x76.png?v=3e82mPRvPa">
+	<link rel="apple-touch-icon" sizes="120x120" href="/images/ico/apple-touch-icon-120x120.png?v=3e82mPRvPa">
+	<link rel="apple-touch-icon" sizes="152x152" href="/images/ico/apple-touch-icon-152x152.png?v=3e82mPRvPa">
+	<link rel="apple-touch-icon" sizes="180x180" href="/images/ico/apple-touch-icon-180x180.png?v=3e82mPRvPa">
+	<link rel="icon" type="image/png" sizes="32x32" href="/images/ico/favicon-32x32.png?v=3e82mPRvPa">
+	<link rel="icon" type="image/png" sizes="16x16" href="/images/ico/favicon-16x16.png?v=3e82mPRvPa">
+	<link rel="manifest" href="/images/ico/site.webmanifest.json?v=3e82mPRvPa">
+	<link rel="mask-icon" href="/images/ico/safari-pinned-tab.svg?v=3e82mPRvPa" color="#5bbad5">
+	<link rel="shortcut icon" href="/images/ico/favicon.ico?v=3e82mPRvPa">
+
+	<meta name="msapplication-TileColor" content="#b91d47">
+	<meta name="msapplication-config" content="/images/ico/browserconfig.xml?v=3e82mPRvPa">
+	<meta name="theme-color" content="#ffffff">
+	<link rel="stylesheet"
+		  href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+		  integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+		  crossorigin="anonymous">
+	<link rel="stylesheet" href="@Url.ContentVersioned("/bundles/bootstrap.css")" />
+	<link rel="stylesheet" href="@Url.ContentVersioned("/bundles/cssStyles.css")" />
+	@RenderSection("Styles", required: false)
+	<script src="@Url.ContentVersioned("/Scripts/app/Utilities/_layout-header.js")" defer></script>
+	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-118454712-1"></script>
+
+	<script src="@Url.ContentVersioned("/Scripts/app/Utilities/_layout-footer.js")" defer></script>
+	<environment exclude="Development">
+		<script src="@Url.ContentVersioned("/bundles/oidc.js")"></script>
+	</environment>
+	<environment include="Development">
+		<script src="@Url.ContentVersioned("/lib/oidc-client/oidc-client.js")"></script>
+		<script src="@Url.ContentVersioned("/Scripts/app/Utilities/oidcSettings.js")"></script>
+	</environment>
+	<script src="@Url.ContentVersioned("/bundles/jquery.js")"></script>
+	<script src="@Url.ContentVersioned("/bundles/jquery-plugins.js")"></script>
+	<script src="@Url.ContentVersioned("/bundles/bootstrap.js")"></script>
+	<script src="https://js.stripe.com/v3/" defer></script>
+</head>
+<body class="blood-red">
+	@Html.AntiForgeryToken()
+	<header class="navbar navbar-inverse navbar-fixed-top" role="banner">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				@*<button type="button" class="navbar-toggler" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>*@
+				<a class="navbar-brand" href="/"><img src="~/images/logo/wg_logo_03.png" alt="logo" /></a>
+				<!-- navbar-toggle collapsed for hide the content -->
+				<button type="button" class="navbar-toggle collapsed hidden-sm"
+						data-toggle="collapse" data-target="#menu">
+					<!-- sr-only gives feature, hides elements from all devices except screen -->
+					<span class="sr-only">Hamburger Menu</span> <span class="icon-bar"></span>
+					<span class="icon-bar"></span> <span class="icon-bar"></span>
+					<!-- icon-bar creates structure like triple equal -->
+				</button>
+			</div>
+			<div class="collapse navbar-collapse" id="menu">
+				<partial name="_LoginPartial" />
+				<ul class="nav navbar-nav navbar-right">
+					<li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index" data-bind="click: SetWarriorProfile.bind($data, null)">Home</a></li>
+					@if(UserIsAdmin)
+					{
+						<li class="nav-item"><a asp-area="" asp-controller="Ranks" asp-action="Index" >Ranks</a></li>@*data-bind="click: SetWarriorProfile.bind($data, null)"*@
+						@*<li class="nav-item"><a asp-area="" asp-controller="Rings" asp-action="Index" data-bind="click: SetWarriorProfile.bind($data, null)">Rings</a></li>*@
+						<li class="nav-item"><a asp-area="" asp-controller="Crosses" asp-action="Index" >Crosses</a></li>@*data-bind="click: SetWarriorProfile.bind($data, null)"*@
+					}
+					@*<li class="dropdown">
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown">Goals <i class="icon-angle-down"></i></a>
+						<ul class="dropdown-menu">
+							<li><a asp-area="" asp-controller="Ranks" asp-action="Index">Ranks</a></li>
+							<li><a asp-area="" asp-controller="Rings" asp-action="Index">Rings</a></li>
+							<li><a asp-area="" asp-controller="Crosses" asp-action="Index">Crosses</a></li>
+						</ul>
+					</li>*@
+				</ul>
+			</div>
+		</div>
+	</header><!--/header-->
+	<div class="container-fluid" style="margin:auto">
+		<main role="main" class="pb-3" id="content" style="margin:auto">
+			@RenderBody()
+			@RenderSection("SPAViews", required: false)
+		</main>
+	</div>
+
+	<section id="bottom">
+		<div class="container">
+			<div class="row">
+				<div class="col-xs-12">
+					<h4>Warriors Guild Links</h4>
+					<ul class="list-inline">
+						<li><a href="http://www.warriorsguild.com" target="_blank">Main</a></li>
+						<li><a href="http://www.warriorsguild.com/About" target="_blank">About</a></li>
+						<li><a href="http://www.warriorsguild.com/Vision" target="_blank">Vision</a></li>
+						<li><a href="http://www.warriorsguild.com/faqs" target="_blank">FAQs</a></li>
+						<li><a href="http://www.warriorsguild.com/blog" target="_blank">Blog</a></li>
+						<li><a href="http://www.warriorsguild.com/shop" target="_blank">Shop</a></li>
+
+					</ul>
+				</div><!--/.col-md-3-->
+				<!--<div class="col-md-3 col-sm-6">
+					<h4>Company</h4>
+					<div>
+						<ul class="arrow">
+							<li><a href="#">Company Overview</a></li>
+						</ul>
+					</div>
+				</div>-->
+				<!--/.col-md-3-->
+				<!--<div class="col-md-3 col-sm-6">
+					<h4>Latest Blog</h4>
+					<div>
+						<div class="media">
+							<div class="pull-left">
+								<img src="/images/blog/thumb1.jpg" alt="">
+							</div>
+							<div class="media-body">
+								<span class="media-heading"><a href="#">Pellentesque habitant morbi tristique senectus</a></span>
+								<small class="muted">Posted 17 Aug 2013</small>
+							</div>
+						</div>
+					</div>
+				</div>-->
+				<!--/.col-md-3-->
+				<!--<div class="col-md-3 col-sm-6">
+					<h4>Address</h4>
+					<address>
+						<strong>Twitter, Inc.</strong><br>
+						795 Folsom Ave, Suite 600<br>
+						San Francisco, CA 94107<br>
+						<abbr title="Phone">P:</abbr> (123) 456-7890
+					</address>
+					<h4>Newsletter</h4>
+					<form role="form">
+						<div class="input-group">
+							<input type="text" class="form-control" autocomplete="off" placeholder="Enter your email">
+							<span class="input-group-btn">
+								<button class="btn btn-danger" type="button">Go!</button>
+							</span>
+						</div>
+					</form>
+				</div>-->
+				<!--/.col-md-3-->
+			</div>
+		</div>
+	</section><!--/#bottom-->
+	<footer class="border-top footer text-muted">
+		<div class="container">
+			&copy; 2020 - WarriorsGuild - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+		</div>
+	</footer>
+	@RenderSection("Scripts", required: false)
+	<script typye="text/javascript">
+		//Initialize Bootstrap functionality
+		// Initialize tooltip component
+		$(function () {
+		  $('[data-toggle="tooltip"]').tooltip()
+		})
+
+		// Initialize popover component
+		$(function () {
+		  $('[data-toggle="popover"]').popover()
+		})
+	</script>
+</body>
+</html>

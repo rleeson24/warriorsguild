@@ -1,0 +1,60 @@
+﻿@model WarriorsGuild.Models.Account.ProfileUrls
+@{
+	ViewBag.Title = "Manage Warriors";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@using WarriorsGuild.Utilities
+
+<!-- ko with: profile -->
+<section>
+	<div class="container">
+
+		<div class="row">
+			<div class="col-xs-12">
+				<h2>Manage Warriors</h2>
+				<hr />
+			</div>
+		</div>
+		@if (User.IsInRole("Guardian") || User.IsInRole("Admin"))
+		{
+			<div class="row">
+				<div class="col-xs-12">
+					<h3>My Warriors <a href="#" class="glyphicon glyphicon-align-right glyphicon-plus-sign" data-bind="click: registerNewUser"></a></h3>
+				</div>
+			</div>
+			<div class="row" data-bind="foreach: dataModel.ChildUsers">
+				<div class="col-xs-12 col-sm-6 col-md-4 col-lg-3">
+					<div class="card card-container">
+						<!--rank Name-->
+						<div class="text-center">
+							<h4 data-bind="text: firstName + ' ' + lastName" style="padding:5px;"></h4>
+						</div>
+						<div style="padding-left: 5px">
+							<address>
+								<div data-bind="text: addressLine1"></div>
+								<div data-bind="text: addressLine2"></div>
+								<div data-bind="text: city + ', ' + state + '  ' + postalCode"></div>
+								<div data-bind="text: 'Phone: ' + phoneNumber"></div>
+								<div data-bind="text: email"></div>
+							</address>
+						</div>
+						<div class="text-center">
+							<h4 data-bind="text: 'Username: ' + userName" style="padding:5px;"></h4>
+							@*<a data-bind="attr: { href: `/EditProfile/${id}`}">Edit</a>*@
+							<a href="#" style="display:none;">Reset Password</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+</section>
+<script>
+	var profileUrls = @Html.Raw(Json.Serialize(Model));
+</script>
+<!-- /ko -->
+
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/profiles.js")" defer></script>
+}

@@ -1,0 +1,22 @@
+﻿<h4>Pray for focus and wisdom</h4>
+<h4>Read <span data-bind="text: crossDay.passage()"></span></h4>
+<div class="row" data-bind="foreach: crossDay.questions">
+	<cross-day-question-answer params="{
+										cross: cross,
+										crossDay: crossDay,
+										question: $data,
+										hasActiveSubscription: hasActiveSubscription,
+										userIsWarrior: userIsWarrior
+										}" />
+</div>
+
+<div class="row">
+	<div class="col-xs-12">
+		<button class="btn btn-sm btn-primary" data-bind="click: function(data) { crossDay.editing(false); }, visible: crossDay.editing()">Cancel Edit</button>
+		<button class="btn btn-sm btn-primary btn-save-answers" data-bind="click: function(data) { completeDay(data, cross.id); }">Save Answers</button>
+		<button class="btn btn-sm btn-danger" data-bind="click: function(data) { returnDay(data); }, visible: userIsWarrior && warriorCompleted() && !crossDay.editing()">Edit Answers</button>
+		<div data-bind="visible: userIsWarrior && crossDay.warriorCompleted() && $data === lastDayCompleted()">
+			<p>You have completed Day <span data-bind="text: $index() + 1"></span>.</p>
+		</div>
+	</div>
+</div>

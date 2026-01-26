@@ -1,0 +1,241 @@
+﻿@model WarriorsGuild.Models.PaymentUrls
+
+@{
+	ViewBag.Title = "Manage Price Options | Warriors Guild";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@using WarriorsGuild.Data.Models.Payments
+@using WarriorsGuild.Utilities
+
+<div class="container plain">
+	<h2>@ViewBag.Title</h2>
+
+	<!-- ko with: paymentPlans -->
+
+	<div class="alert alert-danger fade in" data-bind="visible: showSaveFailure()" style="display:none">
+		<a href="#" class="close" data-bind="click: function() { showSaveFailure(false); }">&times;</a>
+		Uh oh! <span data-bind="text: actionFailureMessage()"></span>
+	</div>
+	<div id="saveOptionSuccessMessage" class="alert alert-success fade in" data-bind="visible: showSaveSuccess()" style="display:none">
+		<a href="#" class="close" data-bind="click: function() { showSaveSuccess(false); }">&times;</a>
+		<strong>Success!</strong> The Option has been saved.
+	</div>
+	<div id="deleteOptionSuccessMessage" class="alert alert-success fade in" data-bind="visible: showDeleteSuccess()" style="display:none">
+		<a href="#" class="close" data-bind="click: function() { showDeleteSuccess(false); }">&times;</a>
+		<strong>Success!</strong> The Option has been deleted.
+	</div>
+
+	<div id="retrievingOptionsMessage" class="alert alert-info fade in" data-bind="visible: dataModel.RetrievingPlans()" style="display:none">
+		<img class="icon-spin" style="width: 1em; height: 1em;" src="~/images/busy.gif" />	Please wait as we retrieve existing payment plans.
+	</div>
+	<div id="pricing-form" class="row">
+		<!-- ko foreach: dataModel.PriceOptions -->
+		<div class="col-md-5 col-xs-6">
+			<div class="card plan form-horizontal">
+				<div class="container-fluid">
+					<div class="row">
+						<strong class="col-xs-5 text-right">Stripe Status: </strong>
+						<div class="col-xs-7 btn-group-xs">
+							<span data-bind="text: stripeStatusForDisplay()"></span>
+							<button class="btn btn-danger" data-bind="visible: stripeStatus() === WarriorsGuild.WgStripeStatuses.STATUS_OPTION_ACTIVE, click: function(data) { $parent.deactivateOption(data, $parent.dataModel.PriceOptionsUrl); }">Deactivate</button>
+							<button class="btn btn-primary" data-bind="visible: stripeStatus() === WarriorsGuild.WgStripeStatuses.STATUS_OPTION_CREATED || stripeStatus() === WarriorsGuild.WgStripeStatuses.STATUS_OPTION_INACTIVE, click: function(data) { $parent.activateOption(data, $parent.dataModel.PriceOptionsUrl); }">Activate</button>
+						</div>
+					</div>
+					<div class="row">
+						<strong class="col-xs-5 text-right">Description: </strong>
+						<div class="col-xs-6">
+							<div data-bind="text: description()"></div>
+						</div>
+					</div>
+					<div class="row">
+						<strong class="col-xs-5 text-right">Frequency:</strong>
+						<div class="col-xs-7">
+							<div data-bind="text: frequency() === 0 ? 'Monthly' : 'Yearly'"></div>
+						</div>
+					</div>
+					<div class="row">
+						<strong class="col-xs-5 text-right">Setup Fee: </strong>
+						<div class="col-xs-7">
+							<div data-bind="text: '$' + setupFee()"></div>
+						</div>
+					</div>
+					<div class="row">
+						<strong class="col-xs-5 text-right">Base Charge:</strong>
+						<div class="col-xs-7">
+							<div data-bind="text: '$' + charge()"></div>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-xs-5 text-right"># of Guardians:</label>
+						<div class="col-xs-7">
+							<div data-bind="text: numberOfGuardians()"></div>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-xs-5 text-right"># of Warriors:</label>
+						<div class="col-xs-7">
+							<div data-bind="text: numberOfWarriors()"></div>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-xs-5 text-right">Add'l Guardian:</label>
+						<div class="col-xs-7">
+							<div data-bind="text: '$' + additionalGuardianCharge()"></div>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-xs-5 text-right">Add'l Warrior:</label>
+						<div class="col-xs-7">
+							<div data-bind="text: '$' + additionalWarriorCharge()"></div>
+						</div>
+					</div>
+					@*<div class="row" data-bind="visible: hasTrialPeriod()">
+							<strong class="col-xs-5 text-right">Trial Charge:</strong>
+							<div class="col-xs-7 input-group">
+								<div data-bind="text: '$' + trialPeriodCharge()"></div>
+							</div>
+						</div>*@
+					<div class="row" data-bind="visible: hasTrialPeriod()">
+						<strong class="col-xs-5 text-right">Trial Length:</strong>
+						<div class="col-xs-7 input-group">
+							<span data-bind="text: trialPeriodLength()"></span>&nbsp;
+							<span data-bind="text: (function() { return frequency() == 0 ? 'Months' : 'Years'; })()"></span>
+						</div>
+					</div>
+					<!-- ko foreach: perks -->
+					<div class="form-group">
+						<div class="col-xs-3 col-xs-offset-2 text-right">
+							<input type="text" class="form-control" data-bind="value: quantity" />
+						</div>
+						<div class="col-xs-5 text-left">
+							<input class="form-control" data-bind="value: description" />
+						</div>
+						<div class="col-xs-1">
+							<div class="btn" data-bind="click: $parent.removePerk" style="padding-top: 5px;"><span class="glyphicon glyphicon-remove"></span></div>
+						</div>
+					</div>
+					<!-- /ko -->
+					<div class="row">
+						<button class="btn btn-xs btn-addnew" data-bind="click: addPerk"><span class="glyphicon glyphicon-plus-sign"></span>&nbsp;Add Perk</button>
+					</div>
+					<div class="row">
+						<div class="button-group" style="padding-top: 5px">
+							<button class="btn btn-primary btn-sm" data-bind="click: function(data) { $parent.saveOption(data, $parent.dataModel.PriceOptionsUrl); }">Save</button>
+							<button class="btn btn-danger btn-sm" data-bind="visible: (function() { return stripeStatus() !== WarriorsGuild.WgStripeStatuses.STATUS_OPTION_DELETED; })(), click: function(data) { $parent.deleteOption(data, $parent.dataModel.PriceOptionsUrl); }">Delete</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Add the extra clearfix for only the required viewport -->
+		<!-- ko if: ( $index() + 1 ) % 2 === 0 -->
+		<div class="clearfix visible-sm-block hidden-md hidden-lg"></div>
+		<!-- /ko -->
+		<!-- ko if: ( $index() + 1 ) % 4 === 0 -->
+		<div class="clearfix visible-md-block"></div>
+		<!-- /ko -->
+		<!-- /ko -->
+		<div class="col-md-4 col-xs-6">
+			<div class="plan form-horizontal" id="add-plan-tile">
+				<div class="container-fluid">
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="desc">Description: </label>
+						<div class="col-xs-7">
+							<input type="text" class="form-control" id="desc" data-bind="value: dataModel.Description" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="frequency">
+							Frequency:
+						</label>
+						<div class="col-xs-7">
+							<select class="form-control frequency" id="frequency" data-bind="value: dataModel.Frequency">
+								<option value="Monthly">Monthly</option>
+								<option value="Yearly">Yearly</option>
+							</select>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="setupFee">Setup Fee: </label>
+						<div class="col-xs-7 input-group">
+							<span class="input-group-addon">$</span>
+							<input type="text" class="form-control dollar-amount col-xs-6" id="setupFee" data-bind="value: dataModel.SetupFee" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="baseCharge">Base Charge:</label>
+						<div class="col-xs-7 input-group">
+							<span class="input-group-addon">$</span>
+							<input type="text" class="form-control dollar-amount col-xs-6" id="baseCharge" data-bind="value: dataModel.Charge" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="numberOfGuardians"># of Guardians:</label>
+						<div class="col-xs-7">
+							<input type="text" class="form-control" style="width: 50px" id="numberOfGuardians" data-bind="value: dataModel.NumberOfGuardians" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="numberOfWarriors"># of Warriors:</label>
+						<div class="col-xs-7">
+							<input type="text" class="form-control" style="width: 50px" id="numberOfWarriors" data-bind="value: dataModel.NumberOfWarriors" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="addlGuardianCharge">Add'l Guardian:</label>
+						<div class="col-xs-7 input-group">
+							<span class="input-group-addon">$</span>
+							<input type="text" class="form-control dollar-amount col-xs-6" id="addlGuardianCharge" data-bind="value: dataModel.AdditionalGuardianCharge" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-xs-5 text-right" for="addlWarriorCharge">Add'l Warrior:</label>
+						<div class="col-xs-7 input-group">
+							<span class="input-group-addon">$</span>
+							<input type="text" class="form-control dollar-amount col-xs-6" id="addlWarriorCharge" data-bind="value: dataModel.AdditionalWarriorCharge" />
+						</div>
+					</div>
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" data-bind="checked: dataModel.HasTrialPeriod"> <strong>Has Trial Period</strong>
+						</label>
+					</div>
+					<div class="form-group" data-bind="visible: dataModel.HasTrialPeriod()">
+						<strong class="control-label col-xs-5 text-right">Trial Period:</strong>
+						<div class="col-xs-5 input-group">
+							<input type="text" class="form-control" data-bind="value: dataModel.TrialPeriodLength" />
+							<span class="input-group-addon" data-bind="text: (function() { return dataModel.Frequency() == 0 ? 'Months' : 'Years'; })()"></span>
+						</div>
+					</div>
+					@*<div class="form-group" data-bind="visible: dataModel.HasTrialPeriod()">
+							<strong class="control-label col-xs-3 col-xs-offset-2 text-right">Charge:</strong>
+							<div class="col-xs-7 input-group">
+								<span class="input-group-addon">$</span>
+								<input type="text" class="form-control dollar-amount" data-bind="value: dataModel.TrialPeriodCharge" />
+							</div>
+						</div>*@
+					@*<div class="form-group" data-bind="foreach: perks">
+							<input type="text" class="form-control" data-bind="value: description" />
+						</div>
+						<div class="button-group">
+							<button class="btn btn-xs" data-bind="click: addPerk"><span class="glyphicon glyphicon-plus-sign"></span>&nbsp;Add Perk</button>
+						</div>*@
+					<div class="btn-group-vertical">
+						<button class="btn btn-primary" data-bind="click: function(data) { saveOption(dataModel, dataModel.PriceOptionsUrl); }">Create</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div><!--/.col-md-3-->
+	<!-- /ko -->
+</div>
+
+<script>
+	var paymentUrls = @Html.Raw(Json.Serialize(Model));
+	var priceOptionStates = @Html.Raw( Json.Serialize( Enum.GetNames( typeof( BillingPlanState ) ) ) );
+</script>
+
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/paymentPlans.js")" defer></script>
+}

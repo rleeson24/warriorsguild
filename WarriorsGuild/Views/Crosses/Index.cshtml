@@ -1,0 +1,391 @@
+﻿@model WarriorsGuild.Models.CrossUrls
+@{
+	ViewBag.Title = "Crosses | Warriors Guild";
+	var UserIsAdmin = User.IsInRole("Admin");
+	var UserIsAdminString = UserIsAdmin.ToString().ToLower();
+	var UserIsGuardian = User.IsInRole("Guardian") || SessionManager.PreviewMode;
+	var UserIsGuardianString = UserIsGuardian.ToString().ToLower();
+	var UserIsWarrior = User.IsInRole("Warrior");
+	var UserIsWarriorString = UserIsWarrior.ToString().ToLower();
+	var previewMode = SessionManager.PreviewMode.ToString().ToLower();
+}
+@inject WarriorsGuild.Helpers.Utilities.ISessionManager SessionManager
+@using WarriorsGuild.Utilities
+<!-- ko with: crosses -->
+<div class="container text-center crosses" id="goal-grid">
+	<div class="row" data-bind="visible: !DetailView()">
+		@if (UserIsAdmin)
+		{
+			<!-- ko if: @UserIsAdminString && !@previewMode -->
+			<div data-bind="sortable: { data: dataModel.Crosses, as: 'cross', afterMove: saveNewCrossOrder }">
+				<div class="col-xs-12 col-sm-6 col-md-3 col-lg-3" data-bind="template: { data: cross, name: 'admin-cross-template' }"></div>
+			</div>
+			<div class="col-xs-12 col-sm-6 col-md-3 col-lg-3" data-bind="template: { name: 'add-cross-template' }"></div>
+			<!-- /ko -->
+		}
+		<!-- ko if: !@UserIsAdminString || @previewMode -->
+		<div data-bind="visible: dataModel.Crosses().length === 0" class="col-xs-12 center" style="display:none">
+			<h3 style="margin-bottom: 200px;">No Crosses were found in the system.  Please contact administrator.</h3>
+		</div>
+		<!-- ko foreach: { data: dataModel.Crosses, as: 'cross' } -->
+		<div class="col-xs-12 col-sm-6 col-md-3 col-lg-3" data-bind="template: { data: cross, name: 'cross-template' }"></div>
+		<!-- Add the extra clearfix for only the required viewport -->
+		<!-- ko if: ( $index() + 1 ) % 2 === 0 -->
+		<div class="clearfix visible-sm-block hidden-md hidden-lg"></div>
+		<!-- /ko -->
+		<!-- ko if: ( $index() + 1 ) % 4 === 0 -->
+		<div class="clearfix visible-md-block visible-lg-block"></div>
+		<!-- /ko -->
+		<!-- /ko -->
+		<!-- /ko -->
+	</div>
+	<div data-bind="visible: DetailView()" style="display:none" class="goal-detail">
+		<!-- ko with: crossDetail -->
+		<div class="row text-center">
+			<div class="col-xs-12">
+				<h1 data-bind="text: name()"></h1>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12 col-sm-offset-4 col-sm-4">
+				<div class="image-upload">
+					<img data-bind="attr:{ src: imgSrcAttr() }, visible: hasImage()" alt="goal-image" style="width:100%">
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12">
+				<p data-bind="text: description()">
+				</p>
+			</div>
+		</div>
+		@if (User.Identity.IsAuthenticated)
+		{
+			<div class="row">
+				@if (UserIsAdmin && !SessionManager.PreviewMode)
+				{
+					<div class="col-xs-12">
+						<div class="btn btn-sm btn-info documentationUpload">
+							<form data-bind="imageUploader: guideUploaderSettings()" action="" method="post" enctype="multipart/form-data">
+								<div style="overflow: hidden;">
+									<span class="glyphicon glyphicon-upload"></span><span> Upload Documentation</span>
+									<input type="file" data-bind="uniqueName: true" />
+								</div>
+							</form>
+						</div>
+					</div>
+				}
+			</div>
+			@if (!UserIsWarrior)
+			{
+				<div class="row">
+					<div class="col-xs-12" data-bind="visible: hasGuide()">
+						<a data-bind="attr: { href: downloadGuideUrl() }" download>Download the Guide <img src="~/images/download.png" style="width:22px" /></a>
+					</div>
+				</div>
+			}
+			<div>
+				@if(!UserIsAdmin || SessionManager.PreviewMode)
+				{
+					<cross params="{crossId: $parent.crossId, hasActiveSubscription: @ViewBag.HasActiveSubscription.ToString().ToLower(), userIsWarrior: @UserIsWarriorString, userIsGuardian: @UserIsGuardianString, showAllDaysSinceCheckpoint: true }" class="center" />
+				}
+				@if (UserIsAdmin && !SessionManager.PreviewMode)
+				{
+					@*<p class="col-xs-12">Rearrange items by drag-and-drop</p>*@
+					<!-- ko foreach: days -->
+					<h2>Passage <span data-bind="text: $index() + 1"></span></h2>
+					<div class="row">
+						<div class="form-group">
+							<label class="col-xs-offset-2 col-sm-offset-3 col-xs-2 col-sm-1 col-form-label" style="padding-top: 5px" for="passage">Passage:</label>
+							<div class="col-xs-3 col-sm-2"><input type="text" class="form-control" id="passage" data-bind="value: passage" /></div>
+							<label class="col-xs-2 col-sm-1 col-form-label" style="padding-top: 5px" for="inputWeight">Weight:</label>
+							<div class="col-xs-2 col-md-1"><input type="number" class="form-control" id="inputWeight" inputmode="numeric" maxlength="3" data-bind="value: weight" min="1" max="50" /></div>
+							<div class="col-xs-3 col-md-2">
+								<div class="check">
+									<div class="squaredThree">
+										<input type="checkbox" data-bind="attr: { id: 'rqisCheckpoint' + $index() },
+																checked: isCheckpoint" />
+										<label data-bind="attr: { for: 'rqisCheckpoint' + $index() }"></label>
+									</div>
+								</div>
+								<label data-bind="attr: { for: 'rqisCheckpoint' + $index() }">Checkpoint</label>
+							</div>
+						</div>
+					</div>
+					<!-- /ko -->
+					<div class="row">
+						<div class="col-xs-12">
+							<button class="btn btn-xs btn-addnew" style="margin: 20px 0" data-bind="click: addDay">Add Day</button>
+						</div>
+					</div>
+					<div class="row">
+						<div class="form-group text-left">
+							<label class="left" style="padding-top: 5px" for="explainTest">Unique Text:</label>
+							<input type="text" class="form-control" id="explainTest" data-bind="value: explainText, valueUpdate: 'afterkeydown'" />
+						</div>
+					</div>
+					<div class="row">
+						<label data-bind="text: explainTextPreview()"></label>
+					</div>
+
+					<div class="row" style="padding-top: 20px">
+						<div class="col-xs-12">
+							<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parent.saveCrossDaysAndQuestions(data); }">Save Changes</button>
+						</div>
+					</div>
+					<!-- ko foreach: days -->
+					<!-- ko if: warriorCompleted() || $data === $parents[1].dataModel.nextDayToComplete() && $parents[1].dataModel.PendingCrossApprovals().length === 0 -->
+						<h2>Day <span data-bind="text: $index() + 1"></span></h2>
+						<!-- ko if: !warriorCompleted() && !$parents[1].isAnswerTextAreaEnabled(@UserIsWarriorString, $data)-->
+							<!-- ko if: @UserIsWarriorString && $parents[1].dataModel.timeToUnlock() > new Date() -->
+							<span>Available 6 AM tomorrow</span>
+							<!-- /ko -->
+							@if (UserIsGuardian || SessionManager.PreviewMode)
+							{
+								<p>Awaiting Warrior Completion</p>
+							}
+						<!-- /ko -->
+					<!-- /ko -->
+					<!-- ko if: warriorCompleted() || $parents[1].isAnswerTextAreaEnabled(@UserIsWarriorString, $data) -->
+						<h4>Pray for focus and wisdom</h4>
+						<h4>Read <span data-bind="text: passage()"></span></h4>
+						<div class="row" data-bind="foreach: questions">
+							<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8 col-lg-offset-3 col-lg-6 text-left">
+								<p data-bind="text: text"></p>
+								@if (ViewBag.HasActiveSubscription)
+								{
+									<!-- ko if: showEntryField -->
+									<!-- ko if: !$parent.warriorCompleted() || $parent.editing() -->
+									<textarea class="form-control" data-bind="value: answer, enable: $parents[2].isAnswerTextAreaEnabled(@UserIsWarriorString, $parent)"></textarea>
+									<!-- /ko -->
+									<!-- ko if: $parent.warriorCompleted() && !$parent.editing() -->
+									<p class="answer" data-bind="text: answer()"></p>
+									<!-- /ko -->
+									<!-- /ko -->
+								}
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-xs-12">
+								<button class="btn btn-sm btn-primary" data-bind="click: function(data) { data.editing(false); }, visible: editing()">Cancel Edit</button>
+								<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parents[1].completeDay(data, $parents[1].dataModel.CrossesUrl); }, visible: $parents[1].isAnswerTextAreaEnabled(@UserIsWarriorString, $data)">Save Answers</button>
+								<button class="btn btn-sm btn-danger" data-bind="click: function(data) { $parents[1].returnDay(data, $parents[1].dataModel.CrossesUrl); }, visible: @UserIsWarriorString && warriorCompleted() && !editing()">Edit Answers</button>
+								<div data-bind="visible: @UserIsWarriorString && warriorCompleted() && $parents[1].dataModel.timeToUnlock() > new Date() && $data === $parents[1].dataModel.lastDayCompleted()">
+									<p>You have completed Day <span data-bind="text: $index() + 1"></span>.</p>
+								</div>
+							</div>
+						</div>
+					<!-- /ko -->
+					<!-- ko if: $parents[1].dataModel.PendingCrossApprovals().find( e => e.dayId === $data.id ) -->
+					@if (UserIsWarrior)
+					{
+						<h2>You are progressing well! Time for a fireside chat with your guardian.</h2>
+					}
+					else if (UserIsGuardian || SessionManager.PreviewMode)
+					{
+						<div class="row">
+							<div class="col-xs-12">
+								<button class="btn btn-sm btn-primary" data-bind="click: function(data) { $parents[1].confirmCrossDayComplete(); }, visible: $parents[1].dataModel.PendingCrossApprovals().find( e => e.dayId === $data.id )">Fireside Chat Complete</button>
+								@*<button class="btn btn-sm btn-danger" data-bind="click: function(data) { $parents[1].returnCrossDay(data, $parent.dataModel.CrossesUrl); }, visible: $parent.crossDetail.warriorCompleted() && !$parent.crossDetail.guardianReviewed()">Return to Warrior</button>*@
+							</div>
+						</div>
+					}
+					<!-- /ko -->
+				}
+				<!-- ko if: $parents[1].summaryQuestionsVisible(@UserIsWarriorString) -->
+				<div class="row"><h3>Summary</h3></div>
+				<div class="row" data-bind="foreach: questions">
+					<div class="col-xs-12 col-sm-12 col-md-offset-2 col-md-8 text-left">
+						<p data-bind="text: text"></p>
+						@if (ViewBag.HasActiveSubscription)
+						{
+							<!-- ko if: !$parent.warriorCompleted() -->
+							<textarea class="form-control" data-bind="value: answer, enable: $parents[1].summaryQuestionsEnabled(@UserIsWarriorString)"></textarea>
+							<!-- /ko -->
+							<!-- ko if: $parent.warriorCompleted() -->
+							<p class="answer" data-bind="text: answer()"></p>
+							<!-- /ko -->
+						}
+					</div>
+				</div>
+				<!-- /ko -->
+				<!-- /ko -->
+				<!-- /ko -->
+			</div>
+		}
+		<!-- /ko -->
+	</div>
+</div>
+
+@if (UserIsAdmin)
+{
+	<script type="text/html" id="admin-cross-template">
+		<div class="goal-grid-item">
+
+			<!--cross Name-->
+			<div class="goal-name">
+				<input type="text" class="form-control" placeholder="Name" data-bind="value: name">
+			</div>
+			<!--cross Name-->
+			<!--cross Image-->
+			<div class="goal-image image-upload">
+				<a href="#detail" data-bind="attr: { href: '#detail?id=' + id() }">
+					<img data-bind="attr:{ src: imgSrcAttr() }, visible: hasImage()" alt="goal-image" class="img-responsive">
+					<img src="/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image" class="img-placeholder" data-bind="visible: !hasImage()">
+				</a>
+				<div class="imgUpload">
+					<form data-bind="imageUploader: { key: $index(), id: id(), postUrl: $parents[1].dataModel.imageUploadUrl + '/' + id(), imgUrl: $parents[1].dataModel.imageBaseUrl + '/' + id(), fileClass: 'image', maxSize: 200000, successCallBack: function() { $data.imageUploaded(new Date()); } }" action="" method="post" enctype="multipart/form-data">
+						<div style="position: relative; overflow: hidden;">
+							<h4 data-bind="text: 'Upload Image'"></h4>
+							<input type="file" data-bind="uniqueName: true" />
+						</div>
+					</form>
+				</div>
+				@*<div class="price">
+						<h4>$123</h4>
+					</div>*@
+			</div>
+			<!--cross Image-->
+			<!--cross Detail-->
+			<div class="goal-detail">
+
+				@*<div class="days-strength">
+						<div class="row">
+
+							<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+								<span><i class="fa fa-clock-o"></i></span><p>7 Days</p>
+							</div>
+
+							<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+								<span><i class="fa fa-users"></i></span><p>25</p>
+							</div>
+
+						</div>
+					</div>*@
+
+				<textarea class="form-control" placeholder="Description" data-bind="value: description"></textarea>
+			</div>
+			<button style="width: 100%; height: 100%" data-bind="click: function(data) { $parents[1].updateCross(data, $parents[1].dataModel.CrossesUrl); }">
+				<span data-bind="text: 'Save'"></span>
+			</button>
+			<!--cross Detail-->
+
+		</div>
+	</script>
+
+
+	<script type="text/html" id="add-cross-template">
+		<div class="goal-grid-item">
+
+			<!--cross Name-->
+			<div class="goal-name">
+				<input type="text" class="form-control" placeholder="Name" data-bind="value: dataModel.Name">
+			</div>
+			<!--cross Name-->
+			<!--cross Image-->
+			<div class="goal-image image-upload">
+				@*<div class="price">
+						<h4>$123</h4>
+					</div>*@
+			</div>
+			<!--cross Image-->
+			<!--cross Detail-->
+			<div class="goal-detail">
+
+				@*<div class="days-strength">
+						<div class="row">
+
+							<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+								<span><i class="fa fa-clock-o"></i></span><p>7 Days</p>
+							</div>
+
+							<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+								<span><i class="fa fa-users"></i></span><p>25</p>
+							</div>
+
+						</div>
+					</div>*@
+
+				<textarea class="form-control" placeholder="Description" data-bind="value: dataModel.Description"></textarea>
+			</div>
+			<button style="position: relative; overflow: hidden; width: 100%; height: 100%" data-bind="click: saveCross">
+				<span data-bind="text: 'Save'"></span>
+			</button>
+			<!--cross Detail-->
+
+		</div>
+	</script>
+}
+
+<script type="text/html" id="cross-template">
+	<div class="goal-grid-item">
+
+		<!--cross Name-->
+		<div class="goal-name">
+			<a data-bind="attr: { href: '#detail?id=' + id() }">
+				<h4 data-bind="text: name()"></h4>
+			</a>
+			<div class="pins">
+				<a class="completed" data-bind="visible: isCompleted(), attr: { href: '#detail?id=' + id() }" title="Completed"><span class="glyphicon glyphicon-ok"></span></a>
+				<a class="pin" data-bind="visible: !isPinned() && !isCompleted(), click: pin"><span class="glyphicon glyphicon-star-empty"></span></a>
+				<a class="unpin" data-bind="visible: isPinned() && !isCompleted(), click: unpin"><span class="glyphicon glyphicon-star"></span></a>
+				<div class="clearfix"></div>
+			</div>
+		</div>
+		<!--cross Name-->
+		<!--cross Image-->
+		<div class="goal-image">
+			<a href="#detail" data-bind="attr: { href: '#detail?id=' + id() }">
+				<img data-bind="attr:{ src: imgSrcAttr() }, visible: hasImage()" alt="goal-image" class="img-responsive">
+				<img src="/images/logo/Warriors-Guild-icon-sm.png" alt="goal-image" class="img-placeholder" data-bind="visible: !hasImage()">
+			</a>
+			@*<div class="price">
+
+				</div>*@
+		</div>
+		<!--cross Image-->
+		<!--cross Detail-->
+		<div class="goal-detail">
+
+			@*<div class="days-strength">
+					<div class="row">
+
+						<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+							<span><i class="fa fa-clock-o"></i></span><p>7 Days</p>
+						</div>
+
+						<div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+							<span><i class="fa fa-users"></i></span><p>25</p>
+						</div>
+
+					</div>
+				</div>
+
+				<div class="rating">
+					<span><i class="fa fa-star"></i></span>
+					<span><i class="fa fa-star"></i></span>
+					<span><i class="fa fa-star"></i></span>
+					<span><i class="fa fa-star"></i></span>
+				</div>*@
+
+			<p data-bind="text: description()"></p>
+			@*<h4 class="instructor-name"><span><i class="fa fa-graduation-cap"></i></span>What goes here?</h4>*@
+		</div>
+		<!--cross Detail-->
+
+	</div>
+</script>
+
+<script>
+
+	var crossUrls = @Html.Raw(Json.Serialize(Model));
+	var isLoggedIn = @User.Identity.IsAuthenticated.ToString().ToLower();
+	var canViewAll = isLoggedIn && @((UserIsAdmin || ViewBag.HasActiveSubscription ).ToString().ToLower());
+	var userIsWarrior = @UserIsWarriorString;
+</script>
+<!-- /ko -->
+
+@section Scripts{
+	<script src="@Url.ContentVersioned("/bundles/knockout.js")" defer></script>
+	<script src="@Url.ContentVersioned("/bundles/crosses.js")" defer></script>
+}
