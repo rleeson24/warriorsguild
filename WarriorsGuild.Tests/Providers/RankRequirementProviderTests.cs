@@ -71,20 +71,17 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task GetRequirementsAsync()
         {
-            
-            // Arrange
             Guid userIdForStatuses = default;
             var unitUnderTest = this.CreateProvider();
             var id = Guid.NewGuid();
-            var expectedReq = _fixture.Build<RankRequirement>().CreateMany( 1 ).AsQueryable();
-            mockRankRepository.Setup( m => m.GetRequirements( id ) ).Returns( expectedReq );
-            var selectReqs = expectedReq.Skip( 2 );
-            var expectedStatuses = selectReqs.Select( r =>_fixture.Build<RankStatus>().With( s => s.RankRequirementId, r.Id ).With( s => s.UserId, userIdForStatuses ).Create() );
-            mockRankRepository.Setup( m => m.RankStatuses() ).Returns( expectedStatuses );
+            var expectedReqList = _fixture.Build<RankRequirement>().With( r => r.RankId, id ).CreateMany( 1 ).ToList();
+            mockRankRepository.Setup( m => m.GetRequirements( id ) ).Returns( CreateAsyncQueryable( expectedReqList ) );
+            var expectedStatuses = expectedReqList.Select( r => _fixture.Build<RankStatus>().With( s => s.RankRequirementId, r.Id ).With( s => s.UserId, userIdForStatuses ).Create() ).ToList();
+            mockRankStatusProvider.Setup( m => m.GetStatusesAsync( id, userIdForStatuses ) ).ReturnsAsync( expectedStatuses );
 
             var expectedReturn = new List<RankRequirementViewModel>();
 
-            expectedReq.ToList().ForEach( r =>
+            expectedReqList.ForEach( r =>
             {
                 var status = expectedStatuses.SingleOrDefault( s => s.RankRequirementId == r.Id );
                 var hasStatus = status != null;
@@ -96,10 +93,10 @@ namespace WarriorsGuild.Tests.Providers
                 }
                 IEnumerable<MinimalCrossDetail> crossesToComplete = new MinimalCrossDetail[ 0 ];
 
-                IEnumerable<MinimalAttachmentDetail> completedAtt = new MinimalAttachmentDetail[ 0 ];
+                IEnumerable<MinimalGoalDetail> completedAtt = Array.Empty<MinimalGoalDetail>();
                 if ( r.RequireAttachment && hasStatus )
                 {
-                    completedAtt =_fixture.CreateMany<MinimalAttachmentDetail>();
+                    completedAtt = new[] { new MinimalAttachmentDetail { Id = Guid.NewGuid() } };
                     mockRankStatusProvider.Setup( m => m.GetAttachmentsForRankStatus( r.Id, userIdForStatuses ) ).ReturnsAsync( completedAtt );
                 }
 
@@ -108,16 +105,11 @@ namespace WarriorsGuild.Tests.Providers
                     crossesToComplete =_fixture.CreateMany<MinimalCrossDetail>();
                     mockRankRepository.Setup( m => m.CrossesForRankReq( r.RankId, r.Id ) ).ReturnsAsync( crossesToComplete );
                 }
-                var vmToAdd =_fixture.Create<RankRequirementViewModel>();
-                var itIsRings = It.Is<IEnumerable<MinimalRingDetail>>( seq => seq.SequenceEqual( completedRings ) );
-                var itIsCrosses = It.Is<IEnumerable<MinimalCrossDetail>>( seq => seq.SequenceEqual( crossesToComplete ) );
-                var itIsAtts = It.Is<IEnumerable<MinimalAttachmentDetail>>( seq => seq.SequenceEqual( completedAtt ) );
-                if ( status != null ) mockRankMapper.Setup( m => m.CreateRequirementViewModel( r,
-                                                                status.WarriorCompleted,
-                                                                status.GuardianCompleted, itIsRings, itIsCrosses, itIsAtts ) ).Returns( vmToAdd );
-                else mockRankMapper.Setup( m => m.CreateRequirementViewModel( r,
-                                                                        null,
-                                                                        null, itIsRings, itIsCrosses, itIsAtts ) ).Returns( vmToAdd );
+                var vmToAdd = _fixture.Create<RankRequirementViewModel>();
+                if ( status != null )
+                    mockRankMapper.Setup( m => m.CreateRequirementViewModel( r, status.WarriorCompleted, status.GuardianCompleted, It.IsAny<IEnumerable<MinimalRingDetail>>(), It.IsAny<IEnumerable<MinimalCrossDetail>>(), It.IsAny<IEnumerable<MinimalGoalDetail>>() ) ).Returns( vmToAdd );
+                else
+                    mockRankMapper.Setup( m => m.CreateRequirementViewModel( r, null, null, It.IsAny<IEnumerable<MinimalRingDetail>>(), It.IsAny<IEnumerable<MinimalCrossDetail>>(), It.IsAny<IEnumerable<MinimalGoalDetail>>() ) ).Returns( vmToAdd );
                 expectedReturn.Add( vmToAdd );
             } );
 
@@ -133,19 +125,15 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task UpdateRequirementsAsync()
         {
-            
-            // Arrange
             var unitUnderTest = this.CreateProvider();
             var id = Guid.NewGuid();
-            var existingRequirements =_fixture.Build<RankRequirement>().CreateMany( 4 ).AsQueryable();
-            var requirements =_fixture.Build<RankRequirementViewModel>().CreateMany( 3 ).AsQueryable();
-            mockRankRepository.Setup( m => m.GetRequirements( id ) ).Returns( existingRequirements );
-            mockRankRepository.Setup( m => m.UpdateRequirementsAsync( id, requirements, existingRequirements ) ).Returns( Task.CompletedTask );
+            var existingRequirementsList = _fixture.Build<RankRequirement>().With( r => r.RankId, id ).CreateMany( 4 ).ToList();
+            var requirements = _fixture.Build<RankRequirementViewModel>().CreateMany( 3 );
+            mockRankRepository.Setup( m => m.GetRequirements( id ) ).Returns( CreateAsyncQueryable( existingRequirementsList ) );
+            mockRankRepository.Setup( m => m.UpdateRequirementsAsync( id, It.IsAny<IEnumerable<RankRequirementViewModel>>(), It.IsAny<IEnumerable<RankRequirement>>() ) ).Returns( Task.CompletedTask );
+            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).ReturnsAsync( 1 );
 
-            // Act
-            await unitUnderTest.UpdateRequirementsAsync(
-                id,
-                requirements );
+            await unitUnderTest.UpdateRequirementsAsync( id, requirements );
         }
     }
 }

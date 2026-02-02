@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,6 +42,10 @@ namespace WarriorsGuild.Rings
         Task<RingStatus> GetRequirementStatusAsync( Guid ringId, Guid ringRequirementId, Guid userIdForStatuses );
         Task<IEnumerable<Ring>> UpdateRingOrderAsync( IEnumerable<GoalIndexEntry> request );
         Task<IEnumerable<MinimalGoalDetail>> GetAttachmentsForRingStatus( Guid requirementId, Guid userIdForStatuses );
+        Task<RingApproval> GetLatestPendingOrApprovedApprovalForRingAsync( Guid ringId, Guid userId );
+        Task<RingRequirement> GetRequirementAsync( Guid ringId, Guid requirementId );
+        Task<IEnumerable<PendingApprovalDetail>> GetPendingApprovalDetailsAsync( Guid userId );
+        Task<PendingApprovalDetail> GetPendingApprovalDetailByRingAsync( Guid userId, Guid ringId );
     }
     public class RingRepository : IRingRepository
     {
@@ -340,6 +344,62 @@ namespace WarriorsGuild.Rings
         {
             return await _dbContext.ProofOfCompletionAttachments.Where( r => r.RequirementId == requirementId && r.UserId == userIdForStatuses )
                                                 .Select( r => new MinimalAttachmentDetail() { Id = r.Id } ).ToArrayAsync();
+        }
+
+        public async Task<RingApproval> GetLatestPendingOrApprovedApprovalForRingAsync( Guid ringId, Guid userId )
+        {
+            return await _dbContext.RingApprovals.Where( ra => ra.UserId == userId && ra.RingId == ringId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue )
+                .OrderByDescending( r => r.ApprovedAt )
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<RingRequirement> GetRequirementAsync( Guid ringId, Guid requirementId )
+        {
+            return await _dbContext.RingRequirements.SingleOrDefaultAsync( rr => rr.RingId == ringId && rr.Id == requirementId );
+        }
+
+        public async Task<IEnumerable<PendingApprovalDetail>> GetPendingApprovalDetailsAsync( Guid userId )
+        {
+            var approvalRecords = await _dbContext.RingApprovals.Include( ra => ra.Ring )
+                .Where( ra => ra.UserId == userId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue && !ra.ApprovedAt.HasValue )
+                .ToArrayAsync();
+            var response = new List<PendingApprovalDetail>();
+            foreach ( var ar in approvalRecords )
+            {
+                var requirements = _dbContext.RingRequirements.Where( r => r.RingId == ar.RingId );
+                var statusEntries = _dbContext.RingStatuses.Where( rs => rs.RingId == ar.RingId && rs.UserId == userId && !rs.GuardianCompleted.HasValue && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue );
+                var pendingRequirements = await requirements.Where( rr => statusEntries.Any( se => se.RingRequirementId == rr.Id ) ).ToArrayAsync();
+                response.Add( new PendingApprovalDetail()
+                {
+                    ApprovalRecordId = ar.Id,
+                    RingId = ar.RingId,
+                    RingName = ar.Ring.Name,
+                    RingImageUploaded = ar.Ring.ImageUploaded,
+                    WarriorCompleted = ar.CompletedAt,
+                    GuardianConfirmed = ar.ApprovedAt,
+                    ImageExtension = ar.Ring.ImageExtension,
+                    UnconfirmedRequirements = pendingRequirements
+                } );
+            }
+            return response;
+        }
+
+        public async Task<PendingApprovalDetail> GetPendingApprovalDetailByRingAsync( Guid userId, Guid ringId )
+        {
+            var approval = await _dbContext.RingApprovals.Include( ra => ra.Ring )
+                .Where( ra => ra.UserId == userId && ra.RingId == ringId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue )
+                .FirstOrDefaultAsync();
+            if ( approval == null ) return null;
+            return new PendingApprovalDetail()
+            {
+                ApprovalRecordId = approval.Id,
+                RingId = approval.RingId,
+                RingName = approval.Ring.Name,
+                RingImageUploaded = approval.Ring.ImageUploaded,
+                WarriorCompleted = approval.CompletedAt,
+                GuardianConfirmed = approval.ApprovedAt,
+                ImageExtension = approval.Ring.ImageExtension
+            };
         }
     }
 }

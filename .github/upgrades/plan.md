@@ -310,7 +310,7 @@ IdentityServer4 is in maintenance mode. The plan keeps IdentityServer4.* at curr
 - **Duende IdentityServer** (commercial, requires license for production), or
 - **OpenIddict** (open source alternative)
 
-No changes required for the immediate .NET 10 upgrade.
+**IdentityServerAspNetIdentity project** (standalone, not in main solution): Upgraded to net10.0 with packages updated. Uses `UseMigrationsEndPoint()` instead of deprecated `UseDatabaseErrorPage()`.
 
 ## Entity Framework Core 3.1 ? 10.0 Considerations
 

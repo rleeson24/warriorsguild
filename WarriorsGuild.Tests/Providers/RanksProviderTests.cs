@@ -71,19 +71,17 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task GetListAsync()
         {
-            
             // Arrange
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
-            var expectedList = _fixture.Build<Rank>().CreateMany( 3 ).AsQueryable();
-            mockRankRepository.Setup( m => m.List() ).Returns( expectedList );
+            var expectedList = _fixture.Build<Rank>().CreateMany( 3 ).ToList();
+            mockRankRepository.Setup( m => m.List() ).Returns( CreateAsyncQueryable( expectedList ) );
 
             // Act
-            var result = await unitUnderTest.GetListAsync(
-                userIdForStatuses );
+            var result = await unitUnderTest.GetListAsync( userIdForStatuses );
 
             // Assert
-            Assert.AreEqual( expectedList, result );
+            Assert.IsTrue( expectedList.SequenceEqual( result ) );
         }
 
         [Test]
@@ -91,14 +89,14 @@ namespace WarriorsGuild.Tests.Providers
         {
             // Arrange
             var unitUnderTest = this.CreateProvider();
-            var expectedList = _fixture.Build<Rank>().CreateMany( 1 ).AsQueryable();
-            mockRankRepository.Setup( m => m.List() ).Returns( expectedList );
+            var expectedList = _fixture.Build<Rank>().CreateMany( 1 ).ToList();
+            mockRankRepository.Setup( m => m.List() ).Returns( CreateAsyncQueryable( expectedList ) );
 
             // Act
             var result = await unitUnderTest.GetPublicAsync();
 
             // Assert
-            Assert.AreEqual( expectedList, result );
+            Assert.AreEqual( expectedList.Single(), result );
         }
 
         [Test]
@@ -244,25 +242,22 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task UpdateAsync_RankExists_UpdateShouldBeCalled()
         {
-            
             // Arrange
             var unitUnderTest = this.CreateProvider();
             var id = Guid.NewGuid();
-            var rank =_fixture.Build<Rank>().Create();
+            var rank = _fixture.Build<Rank>().Create();
             var expectedRank = _fixture.Build<Rank>().Create();
             mockRankRepository.Setup( m => m.Get( id, true ) ).Returns( expectedRank );
             mockRankRepository.Setup( m => m.Update( id, expectedRank ) );
+            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
-            await unitUnderTest.UpdateAsync(
-                id,
-                rank );
+            await unitUnderTest.UpdateAsync( id, rank );
 
             // Assert
             Assert.AreEqual( expectedRank.Name, rank.Name );
             Assert.AreEqual( expectedRank.Description, rank.Description );
             mockRankRepository.Verify( m => m.Update( id, expectedRank ), Times.Once );
-            //TODO: make sure no values change except these
         }
 
         [Test]
@@ -273,22 +268,20 @@ namespace WarriorsGuild.Tests.Providers
         [TestCase( 125 )]
         public async Task AddAsync( Int32 maxIndex )
         {
-            
             // Arrange
             var unitUnderTest = this.CreateProvider();
-            var input =_fixture.Build<CreateRankModel>().Create();
-            var newRank =_fixture.Build<Rank>().Create();
-            var finalRank =_fixture.Build<Rank>().Create();
+            var input = _fixture.Build<CreateRankModel>().Create();
+            var newRank = _fixture.Build<Rank>().Create();
             mockRankRepository.Setup( m => m.GetMaxRankIndexAsync() ).Returns( Task.FromResult( maxIndex ) );
             mockRankMapper.Setup( m => m.CreateRank( input.Description, input.Name, maxIndex + 1 ) ).Returns( newRank );
             mockRankRepository.Setup( m => m.Add( newRank ) );
+            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
-            var result = await unitUnderTest.AddAsync(
-                input );
+            var result = await unitUnderTest.AddAsync( input );
 
             // Assert
-            Assert.AreEqual( finalRank, result );
+            Assert.AreSame( newRank, result );
             mockRankRepository.Verify( m => m.Add( newRank ), Times.Once );
         }
 
@@ -323,19 +316,16 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task UpdateRankOrderAsync()
         {
-            
-            // Arrange
             var unitUnderTest = this.CreateProvider();
-            var request =_fixture.Build<GoalIndexEntry>().CreateMany( 3 );
-            var expectedRanks =_fixture.Build<Rank>().CreateMany( 3 );
+            var request = _fixture.Build<GoalIndexEntry>().CreateMany( 3 );
+            var expectedRanks = _fixture.Build<Rank>().CreateMany( 3 ).ToList();
             mockRankRepository.Setup( m => m.UpdateOrder( request ) );
+            mockRankRepository.Setup( m => m.List() ).Returns( CreateAsyncQueryable( expectedRanks ) );
+            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
-            // Act
-            var result = await unitUnderTest.UpdateOrderAsync(
-                request );
+            var result = await unitUnderTest.UpdateOrderAsync( request );
 
-            // Assert
-            Assert.AreEqual( expectedRanks, result );
+            Assert.IsTrue( expectedRanks.SequenceEqual( result ) );
             mockRankRepository.Verify( m => m.UpdateOrder( request ), Times.Once );
         }
 
@@ -374,7 +364,7 @@ namespace WarriorsGuild.Tests.Providers
             //mockAttachmentProvider.Setup( m => m.UploadFileAsync( WarriorsGuildFileType.RankImage, new byte[0], id.ToString(), mediaType ) ).Returns( Task.FromResult( dummyResult ) );
             mockRankRepository.Setup( m => m.Get( id, false ) ).Returns( rank );
             mockRankRepository.Setup( m => m.SetHasImage( rank, ext ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() );
+            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
             await unitUnderTest.UploadImageAsync(

@@ -1,4 +1,4 @@
-﻿using IdentityServer4;
+using IdentityServer4;
 using IdentityServer4.Models;
 
 namespace WarriorsGuild
@@ -15,13 +15,19 @@ namespace WarriorsGuild
         public static IEnumerable<Client> GetClients( IConfiguration Configuration )
         {
             var host = Configuration[ "Authentication:IdentityServer:Host" ]; //https://localhost:5000
+            if ( string.IsNullOrWhiteSpace( host ) )
+            {
+                host = "https://localhost:5000";
+            }
             return new List<Client>
             {
                 new Client
                 {
                     ClientId = "warriorsGuildMAUI",
                     ClientName = "Warrior Guild Mobile",
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    // This client is used for interactive login from the MAUI/mobile client,
+                    // enable the authorization code flow.
+                    AllowedGrantTypes = GrantTypes.Code,
                     AlwaysSendClientClaims = true,
                     //UpdateAccessTokenClaimsOnRefresh = true,
                     //AlwaysIncludeUserClaimsInIdToken = true,
@@ -47,13 +53,17 @@ namespace WarriorsGuild
                         "role"
                     },
                     AllowOfflineAccess = true,
-                    AccessTokenLifetime = 1
+                    AccessTokenLifetime = 3600,
+                    AbsoluteRefreshTokenLifetime = 2592000,
+                    SlidingRefreshTokenLifetime = 1296000
                 },
                 new Client
                 {
                     ClientId = "warriorsGuildMVC",
                     ClientName = "Warrior Guild Client",
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    // This is the MVC application client which uses the authorization
+                    // code flow (OIDC). Configure as such.
+                    AllowedGrantTypes = GrantTypes.Code,
                     AlwaysSendClientClaims = true,
                     //UpdateAccessTokenClaimsOnRefresh = true,
                     //AlwaysIncludeUserClaimsInIdToken = true,
@@ -79,19 +89,27 @@ namespace WarriorsGuild
                         "role"
                     },
                     AllowOfflineAccess = true,
-                    AccessTokenLifetime = 1
+                    AccessTokenLifetime = 3600,
+                    AbsoluteRefreshTokenLifetime = 2592000,
+                    SlidingRefreshTokenLifetime = 1296000
                 },
                 new Client
                 {
                     ClientId = "js",
                     ClientName = "JavaScript Client",
-                    AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
+                    // This is a public Single Page Application (SPA). Use the
+                    // authorization code flow with PKCE (recommended for SPAs).
+                    AllowedGrantTypes = GrantTypes.Code,
+                    RequirePkce = true,
+                    RequireClientSecret = false,
                     AllowAccessTokensViaBrowser = true,
                     AlwaysIncludeUserClaimsInIdToken = true,
 
-                    RedirectUris =           { $"{host}/callback.html" },
+                    RedirectUris = { $"{host}/callback.html" },
                     PostLogoutRedirectUris = { $"{host}" },
                     AllowedCorsOrigins =     { $"{host}" },
+                    // Explicitly enable this public client
+                    Enabled = true,
                     AllowOfflineAccess = true,
 
                     AllowedScopes =
@@ -102,7 +120,9 @@ namespace WarriorsGuild
                         IdentityServerConstants.LocalApi.ScopeName,
                         "role"
                     },
-                    AccessTokenLifetime = 1
+                    AccessTokenLifetime = 3600,
+                    AbsoluteRefreshTokenLifetime = 2592000,
+                    SlidingRefreshTokenLifetime = 1296000
                 }
             };
         }

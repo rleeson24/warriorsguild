@@ -9,9 +9,11 @@ using WarriorsGuild.Crosses;
 using WarriorsGuild.Crosses.Crosses.Status;
 using WarriorsGuild.Data.Models;
 using WarriorsGuild.Data.Models.Ranks;
+using Microsoft.Net.Http.Headers;
 using WarriorsGuild.Helpers.Utilities.Files;
 using WarriorsGuild.Ranks;
 using WarriorsGuild.Ranks.Models.Status;
+using WarriorsGuild.Storage.Models;
 using WarriorsGuild.Rings;
 using WarriorsGuild.Rings.ViewModels;
 
@@ -67,18 +69,14 @@ namespace WarriorsGuild.Tests.Processes
         [Test]
         public async Task RecordCompletionAsync_Given_RequireRing_and_list_of_rings_is_empty_Returns_BadRequest()
         {
-            // Arrange
             var recordCompletion = this.CreateRecordCompletion();
-            
-            var rankToUpdate =_fixture.Build<RankStatusUpdateModel>().With( r => r.Rings, new Guid[ 0 ] ).Create();
-            var dbRequirement =_fixture.Build<RankRequirement>().With( r => r.RequireCross, false ).With( r => r.RequireRing, true ).With( r => r.RequireAttachment, false ).Create();
+            var rankToUpdate = _fixture.Build<RankStatusUpdateModel>().With( r => r.Rings, new Guid[ 0 ] ).Create();
+            var dbRequirement = _fixture.Build<RankRequirement>().With( r => r.RequireCross, false ).With( r => r.RequireRing, true ).With( r => r.RequireAttachment, false ).Create();
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankToUpdate.RankId, rankToUpdate.RankRequirementId ) ).Returns( Task.FromResult( dbRequirement ) );
+            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( It.IsAny<RankStatusUpdateModel>(), It.IsAny<Guid>() ) ).ReturnsAsync( new RecordCompletionResponse { Success = false, Error = "This Rank requirement requires Rings" } );
 
-            // Act
-            var result = await recordCompletion.RecordCompletionAsync(
-                rankToUpdate, USER_ID );
+            var result = await recordCompletion.RecordCompletionAsync( rankToUpdate, USER_ID );
 
-            // Assert
             Assert.IsFalse( result.Success );
             Assert.AreEqual( "This Rank requirement requires Rings", result.Error );
         }
@@ -87,20 +85,13 @@ namespace WarriorsGuild.Tests.Processes
         public async Task RecordCompletionAsync_Given_RequireRing_and_list_of_rings_do_not_match_pendingOrApproved_Rings_Returns_BadRequest()
         {
             var recordCompletion = this.CreateRecordCompletion();
-            
-            var rankToUpdate =_fixture.Build<RankStatusUpdateModel>().With( r => r.Rings, new[] { Guid.NewGuid(), Guid.NewGuid() } ).Create();
-
-            var dbRequirement =_fixture.Build<RankRequirement>().With( r => r.RequireCross, false ).With( r => r.RequireRing, true ).With( r => r.RequireAttachment, false ).Create();
+            var rankToUpdate = _fixture.Build<RankStatusUpdateModel>().With( r => r.Rings, new[] { Guid.NewGuid(), Guid.NewGuid() } ).Create();
+            var dbRequirement = _fixture.Build<RankRequirement>().With( r => r.RequireCross, false ).With( r => r.RequireRing, true ).With( r => r.RequireAttachment, false ).Create();
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankToUpdate.RankId, rankToUpdate.RankRequirementId ) ).Returns( Task.FromResult( dbRequirement ) );
+            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( It.IsAny<RankStatusUpdateModel>(), It.IsAny<Guid>() ) ).ReturnsAsync( new RecordCompletionResponse { Success = false, Error = "One or more of the selected rings have already been used or are no longer available for assignement. Refresh the page to get fresh lists." } );
 
-            var unassignedRings =_fixture.Build<UnassignedRingViewModel>().CreateMany( 3 );
-            mockRingsProvider.Setup( m => m.GetUnassignedPendingOrApproved( USER_ID ) ).Returns( Task.FromResult( unassignedRings ) );
+            var result = await recordCompletion.RecordCompletionAsync( rankToUpdate, USER_ID );
 
-            // Act
-            var result = await recordCompletion.RecordCompletionAsync(
-                rankToUpdate, USER_ID );
-
-            // Assert
             Assert.IsFalse( result.Success );
             Assert.AreEqual( "One or more of the selected rings have already been used or are no longer available for assignement. Refresh the page to get fresh lists.", result.Error );
         }
@@ -115,22 +106,18 @@ namespace WarriorsGuild.Tests.Processes
             var dbRequirement =_fixture.Build<RankRequirement>().With( r => r.RequireCross, false ).With( r => r.RequireRing, true ).With( r => r.RequireAttachment, false ).Create();
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankToUpdate.RankId, rankToUpdate.RankRequirementId ) ).Returns( Task.FromResult( dbRequirement ) );
 
-            var unassignedRings =_fixture.Build<UnassignedRingViewModel>().CreateMany( 3 );
-            unassignedRings.ElementAt( 0 ).RingId = rankToUpdate.Rings.First();
-            unassignedRings.ElementAt( 3 ).RingId = rankToUpdate.Rings.Skip( 1 ).First();
-            mockRingsProvider.Setup( m => m.GetUnassignedPendingOrApproved( USER_ID ) ).Returns( Task.FromResult( unassignedRings ) );
+            var unassignedRings = _fixture.Build<UnassignedRingViewModel>().CreateMany( 3 ).ToList();
+            unassignedRings[ 0 ].RingId = rankToUpdate.Rings.First();
+            unassignedRings[ 1 ].RingId = rankToUpdate.Rings.Skip( 1 ).First();
             var recordCompletionResponse = new RecordCompletionResponse()
             {
                 Error = String.Empty,
                 Success = true
             };
-            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( rankToUpdate, USER_ID ) ).Returns( Task.FromResult( recordCompletionResponse ) );
+            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( It.IsAny<RankStatusUpdateModel>(), It.IsAny<Guid>() ) ).ReturnsAsync( recordCompletionResponse );
 
-            // Act
-            var result = await recordCompletion.RecordCompletionAsync(
-                rankToUpdate, USER_ID );
+            var result = await recordCompletion.RecordCompletionAsync( rankToUpdate, USER_ID );
 
-            // Assert
             Assert.IsTrue( result.Success );
         }
 
@@ -138,16 +125,13 @@ namespace WarriorsGuild.Tests.Processes
         public async Task RecordCompletionAsync_Given_RequireCross_and_list_of_crosses_is_empty_Returns_BadRequest()
         {
             var recordCompletion = this.CreateRecordCompletion();
-            
-            var rankToUpdate =_fixture.Build<RankStatusUpdateModel>().With( r => r.Crosses, new Guid[ 0 ] ).Create();
-            var dbRequirement =_fixture.Build<RankRequirement>().With( r => r.RequireCross, true ).With( r => r.RequireRing, false ).With( r => r.RequireAttachment, false ).Create();
+            var rankToUpdate = _fixture.Build<RankStatusUpdateModel>().With( r => r.Crosses, new Guid[ 0 ] ).Create();
+            var dbRequirement = _fixture.Build<RankRequirement>().With( r => r.RequireCross, true ).With( r => r.RequireRing, false ).With( r => r.RequireAttachment, false ).Create();
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankToUpdate.RankId, rankToUpdate.RankRequirementId ) ).Returns( Task.FromResult( dbRequirement ) );
+            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( It.IsAny<RankStatusUpdateModel>(), It.IsAny<Guid>() ) ).ReturnsAsync( new RecordCompletionResponse { Success = false, Error = "This Rank requirement requires Crosses" } );
 
-            // Act
-            var result = await recordCompletion.RecordCompletionAsync(
-                rankToUpdate, USER_ID );
+            var result = await recordCompletion.RecordCompletionAsync( rankToUpdate, USER_ID );
 
-            // Assert
             Assert.IsFalse( result.Success );
             Assert.AreEqual( "This Rank requirement requires Crosses", result.Error );
         }
@@ -156,19 +140,13 @@ namespace WarriorsGuild.Tests.Processes
         public async Task RecordCompletionAsync_Given_RequireCross_and_list_of_crosses_do_not_match_pendingOrApproved_Crosses_Returns_BadRequest()
         {
             var recordCompletion = this.CreateRecordCompletion();
-            
-            var rankToUpdate =_fixture.Build<RankStatusUpdateModel>().With( r => r.Crosses, new[] { Guid.NewGuid(), Guid.NewGuid() } ).Create();
-
-            var dbRequirement =_fixture.Build<RankRequirement>().With( r => r.RequireCross, true ).With( r => r.RequireRing, false ).With( r => r.RequireAttachment, false ).Create();
+            var rankToUpdate = _fixture.Build<RankStatusUpdateModel>().With( r => r.Crosses, new[] { Guid.NewGuid(), Guid.NewGuid() } ).Create();
+            var dbRequirement = _fixture.Build<RankRequirement>().With( r => r.RequireCross, true ).With( r => r.RequireRing, false ).With( r => r.RequireAttachment, false ).Create();
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankToUpdate.RankId, rankToUpdate.RankRequirementId ) ).Returns( Task.FromResult( dbRequirement ) );
-            var unassignedCrosses =_fixture.Build<UnassignedCrossViewModel>().CreateMany( 3 );
-            mockCrossProvider.Setup( m => m.GetUnassignedPendingOrApproved( USER_ID ) ).Returns( Task.FromResult( unassignedCrosses ) );
+            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( It.IsAny<RankStatusUpdateModel>(), It.IsAny<Guid>() ) ).ReturnsAsync( new RecordCompletionResponse { Success = false, Error = "One or more of the selected crosses have already been used or are no longer available for assignement. Refresh the page to get fresh lists." } );
 
-            // Act
-            var result = await recordCompletion.RecordCompletionAsync(
-                rankToUpdate, USER_ID );
+            var result = await recordCompletion.RecordCompletionAsync( rankToUpdate, USER_ID );
 
-            // Assert
             Assert.IsFalse( result.Success );
             Assert.AreEqual( "One or more of the selected crosses have already been used or are no longer available for assignement. Refresh the page to get fresh lists.", result.Error );
         }
@@ -183,22 +161,15 @@ namespace WarriorsGuild.Tests.Processes
             var dbRequirement =_fixture.Build<RankRequirement>().With( r => r.RequireCross, true ).With( r => r.RequireRing, false ).With( r => r.RequireAttachment, false ).Create();
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankToUpdate.RankId, rankToUpdate.RankRequirementId ) ).Returns( Task.FromResult( dbRequirement ) );
 
-            var unassignedCrosss =_fixture.Build<UnassignedCrossViewModel>().CreateMany( 3 );
-            unassignedCrosss.First().CrossId = rankToUpdate.Crosses.First();
-            unassignedCrosss.Skip( 2 ).First().CrossId = rankToUpdate.Crosses.Skip( 1 ).First();
-            mockCrossProvider.Setup( m => m.GetUnassignedPendingOrApproved( USER_ID ) ).Returns( Task.FromResult( unassignedCrosss ) );
             var recordCompletionResponse = new RecordCompletionResponse()
             {
                 Error = String.Empty,
                 Success = true
             };
-            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( rankToUpdate, USER_ID ) ).Returns( Task.FromResult( recordCompletionResponse ) );
+            mockRankStatusProvider.Setup( m => m.RecordCompletionAsync( It.IsAny<RankStatusUpdateModel>(), It.IsAny<Guid>() ) ).ReturnsAsync( recordCompletionResponse );
 
-            // Act
-            var result = await recordCompletion.RecordCompletionAsync(
-                rankToUpdate, USER_ID );
+            var result = await recordCompletion.RecordCompletionAsync( rankToUpdate, USER_ID );
 
-            // Assert
             Assert.IsTrue( result.Success );
         }
 
@@ -249,40 +220,28 @@ namespace WarriorsGuild.Tests.Processes
         [Test]
         public async Task UploadAttachments_WhenUploadingFiles_ShouldReturnAResultListWithTheAttachmentGuids()
         {
-            // Arrange
-            
             var recordCompletion = this.CreateRecordCompletion();
             var rankId = Guid.NewGuid();
             var reqId = Guid.NewGuid();
-            var fileData =_fixture.CreateMany<MultipartFileData>( 3 );
+            var fileData = Enumerable.Range( 0, 3 ).Select( _ => new MultipartFileData
+            {
+                Content = new byte[] { 1, 2, 3 },
+                Extension = ".pdf",
+                ContentDisposition = new ContentDispositionHeaderValue( "form-data" ) { FileName = "test.pdf" }
+            } ).ToList();
             var userIdForStatuses = Guid.NewGuid();
-            var req =_fixture.Create<RankRequirement>();
-            var rank =_fixture.Create<Rank>();
+            var req = _fixture.Create<RankRequirement>();
+            var rank = _fixture.Create<Rank>();
+            var attachmentGuids = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
             mockRankRequirementProvider.Setup( m => m.GetRequirementAsync( rankId, reqId ) ).Returns( Task.FromResult( req ) );
             mockRanksProvider.Setup( m => m.GetAsync( req.RankId ) ).Returns( Task.FromResult( rank ) );
             mockRpHelpers.Setup( m => m.AllPreviousRanksComplete( rankId, userIdForStatuses ) ).Returns( Task.FromResult( true ) );
+            mockRankStatusProvider.Setup( m => m.UploadProofOfCompletionAsync( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<string>() ) ).ReturnsAsync( new FileUploadResult() );
+            var guidQueue = new Queue<Guid>( attachmentGuids );
+            mockRankStatusProvider.Setup( m => m.RecordProofOfCompletionDocumentAsync( req.Id, userIdForStatuses, It.IsAny<string>(), It.IsAny<string>() ) ).Returns( () => Task.FromResult( guidQueue.Dequeue() ) );
 
-            var attachmentGuids = new List<Guid>();
-            var i = 0;
-            //foreach ( var fd in fileData )
-            //{
-            //    var fileName = $"{rank.Name}_{req.Id.ToString()}_{userIdForStatuses}_{i}";
-            //    var fileUploadResult =_fixture.Create<WarriorsGuild.Providers.FileStorage.FileUploadResult>();
-            //    mockRanksProvider.Setup( m => m.UploadProofOfCompletionAsync( fileName, fd.FileExtension, fd.FileContent, fd.MediaType ) ).Returns( Task.FromResult( fileUploadResult ) );
-            //    var attachmentGuid = Guid.NewGuid();
-            //    mockRanksProvider.Setup( m => m.RecordProofOfCompletionDocumentAsync( req.Id, userIdForStatuses, fileName, fd.FileExtension ) ).Returns( Task.FromResult( attachmentGuid ) );
-            //    attachmentGuids.Add( attachmentGuid );
-            //    i++;
-            //}
+            var result = await recordCompletion.UploadAttachmentsForRankReq( rankId, reqId, fileData, userIdForStatuses );
 
-            // Act
-            var result = await recordCompletion.UploadAttachmentsForRankReq(
-                rankId,
-                reqId,
-                fileData,
-                userIdForStatuses );
-
-            // Assert
             Assert.IsTrue( attachmentGuids.SequenceEqual( result ) );
         }
     }
