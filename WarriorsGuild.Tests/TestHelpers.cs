@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -29,15 +29,16 @@ namespace WarriorsGuild.Tests
         //}
         public static Mock<DbSet<T>> CreateDbSetMock<T>( List<T> elements ) where T : class
         {
-            var elementsAsQueryable = elements.AsQueryable();
-            var MockSet = new Mock<DbSet<T>>( MockBehavior.Loose );
-            //MockSet.As<IAsyncEnumerable<T>>().Setup( x => x.GetAsyncEnumerator( default ) ).Returns( new TestAsyncEnumerator<T>( elementsAsQueryable.GetEnumerator() ) );
-            MockSet.As<IQueryable<T>>().Setup( x => x.Provider ).Returns( new TestAsyncQueryProvider<T>( elementsAsQueryable.Provider ) );
-            MockSet.As<IQueryable<T>>().Setup( x => x.Expression ).Returns( elementsAsQueryable.Expression );
-            //MockSet.As<IQueryable<T>>().Setup( x => x.ElementType ).Returns( elementsAsQueryable.ElementType );
-            MockSet.As<IQueryable<T>>().Setup( x => x.GetEnumerator() ).Returns( elementsAsQueryable.GetEnumerator() );
-            //MockSet.As<IEnumerable<T>>().Setup( x => x.GetEnumerator() ).Returns( elementsAsQueryable.GetEnumerator() );
-            return MockSet;
+            return CreateDbSetMock( elements, true, false );
+        }
+
+        /// <summary>
+        /// Creates an IQueryable that implements IAsyncEnumerable for EF Core 10 async operations (ToArrayAsync, ToListAsync, etc.).
+        /// Use when mocking repository methods that return IQueryable.
+        /// </summary>
+        public static IQueryable<T> CreateAsyncQueryable<T>( IEnumerable<T> elements ) where T : class
+        {
+            return new TestAsyncEnumerable<T>( elements );
         }
 
         public static Mock<DbSet<T>> CreateDbSetMock<T>( IEnumerable<T> elements ) where T : class
@@ -47,19 +48,20 @@ namespace WarriorsGuild.Tests
 
         public static Mock<DbSet<T>> CreateDbSetMock<T>( IEnumerable<T> elements, Boolean includeEnumerator, Boolean excludeExpression ) where T : class
         {
-            var elementsAsQueryable = elements.AsQueryable();
+            // Use TestAsyncEnumerable so IQueryable implements IAsyncEnumerable (required for EF Core 10 ToArrayAsync, ToListAsync, etc.)
+            var asyncQueryable = new TestAsyncEnumerable<T>( elements );
+            var queryable = (IQueryable<T>)asyncQueryable;
             var MockSet = new Mock<DbSet<T>>( MockBehavior.Loose );
-            //MockSet.As<IAsyncEnumerable<T>>().Setup( x => x.GetAsyncEnumerator( default ) ).Returns( new TestAsyncEnumerator<T>( elementsAsQueryable.GetEnumerator() ) );
+            // Always set up Provider for EF Core 10 async support - excludeExpression no longer skips this
+            MockSet.As<IQueryable<T>>().Setup( x => x.Provider ).Returns( new TestAsyncQueryProvider<T>( queryable.Provider ) );
             if ( !excludeExpression )
             {
-                MockSet.As<IQueryable<T>>().Setup( x => x.Provider ).Returns( new TestAsyncQueryProvider<T>( elementsAsQueryable.Provider ) );
-                MockSet.As<IQueryable<T>>().Setup( x => x.Expression ).Returns( elementsAsQueryable.Expression );
+                MockSet.As<IQueryable<T>>().Setup( x => x.Expression ).Returns( queryable.Expression );
             }
-            //MockSet.As<IQueryable<T>>().Setup( x => x.ElementType ).Returns( elementsAsQueryable.ElementType );
             if ( includeEnumerator )
             {
-                MockSet.As<IQueryable<T>>().Setup( x => x.GetEnumerator() ).Returns( elementsAsQueryable.GetEnumerator() );
-                MockSet.As<IEnumerable<T>>().Setup( x => x.GetEnumerator() ).Returns( elementsAsQueryable.GetEnumerator() );
+                MockSet.As<IQueryable<T>>().Setup( x => x.GetEnumerator() ).Returns( () => asyncQueryable.AsEnumerable().GetEnumerator() );
+                MockSet.As<IEnumerable<T>>().Setup( x => x.GetEnumerator() ).Returns( () => asyncQueryable.AsEnumerable().GetEnumerator() );
             }
             return MockSet;
         }
@@ -122,7 +124,7 @@ namespace WarriorsGuild.Tests
             }
         }
 
-        // Async enumerable for unit testing
+        // Async enumerable for unit testing (EF Core 10 requires IAsyncEnumerable for ToArrayAsync/ToListAsync)
         internal class TestAsyncEnumerable<T> : EnumerableQuery<T>, IAsyncEnumerable<T>, IQueryable<T>
         {
             public TestAsyncEnumerable( IEnumerable<T> enumerable )

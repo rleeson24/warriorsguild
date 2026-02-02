@@ -31,7 +31,7 @@ namespace WarriorsGuild.Tests.Providers
         private Mock<IGuildDbContext> mockGuildDbContext;
         private Mock<IRingRepository> mockRingRepository;
         private Mock<IRingMapper> mockRingMapper;
-        private Mock<IHelpers> mockHelpers;
+        private Mock<IDateTimeProvider> mockDateTimeProvider;
         private Mock<IBlobProvider> mockAttachmentProvider;
         private Mock<IUserProvider> mockUserProvider;
         private Mock<IEmailProvider> emailProvider;
@@ -47,7 +47,7 @@ namespace WarriorsGuild.Tests.Providers
             this.mockRingRepository = this.mockRepository.Create<IRingRepository>();
             this.mockRingMapper = this.mockRepository.Create<IRingMapper>();
             this.mockUserProvider = this.mockRepository.Create<IUserProvider>();
-            this.mockHelpers = this.mockRepository.Create<IHelpers>();
+            this.mockDateTimeProvider = this.mockRepository.Create<IDateTimeProvider>();
             this.mockAttachmentProvider = this.mockRepository.Create<IBlobProvider>();
             this.emailProvider = this.mockRepository.Create<IEmailProvider>();
             this.httpContextAccessor = this.mockRepository.Create<IHttpContextAccessor>();
@@ -66,7 +66,7 @@ namespace WarriorsGuild.Tests.Providers
                 this.mockGuildDbContext.Object,
                 this.mockRingRepository.Object,
                 this.mockRingMapper.Object,
-                this.mockHelpers.Object,
+                this.mockDateTimeProvider.Object,
                 this.mockUserProvider.Object,
                 this.mockAttachmentProvider.Object, emailProvider.Object, httpContextAccessor.Object, logger.Object );
         }
@@ -199,26 +199,16 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task RecordCompletionAsync_NonVoidUnapprovedApprovalRecordFound_NoDataShouldBeUpdated_AndTheResponseSuccessFlagShouldBeFalse()
         {
-            
-            // Arrange
+            // Arrange - pending approval (ApprovedAt=null) blocks adding new status
             var unitUnderTest = this.CreateProvider();
-            var ringForStatus =_fixture.Build<RingStatusUpdateModel>().Create();
+            var ringForStatus = _fixture.Build<RingStatusUpdateModel>().Create();
             var userIdForStatuses = USERID;
+            var pendingApproval = _fixture.Build<RingApproval>().With( r => r.RingId, ringForStatus.RingId ).With( r => r.UserId, userIdForStatuses ).With( r => r.ApprovedAt, (DateTime?)null ).With( r => r.RecalledByWarriorTs, (DateTime?)null ).With( r => r.ReturnedTs, (DateTime?)null ).Create();
             mockRingRepository.Setup( m => m.GetRequirementStatusAsync( ringForStatus.RingId, ringForStatus.RingRequirementId, userIdForStatuses ) ).Returns( Task.FromResult( (RingStatus)null ) );
-            var ringApprovalsDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>(_fixture.Build<RingApproval>().CreateMany( 8 ) ) );
-            var existingApprovalRecord = ringApprovalsDbSet.Object.Skip( 3 ).First();
-            existingApprovalRecord.UserId = userIdForStatuses;
-            existingApprovalRecord.RingId = ringForStatus.RingId;
-            existingApprovalRecord.ReturnedTs = null;
-            existingApprovalRecord.ReturnedReason = null;
-            existingApprovalRecord.RecalledByWarriorTs = null;
-            existingApprovalRecord.ApprovedAt = null;
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( ringApprovalsDbSet.Object );
+            mockRingRepository.Setup( m => m.GetLatestPendingOrApprovedApprovalForRingAsync( ringForStatus.RingId, userIdForStatuses ) ).Returns( Task.FromResult( pendingApproval ) );
 
             // Act
-            var result = await unitUnderTest.RecordCompletionAsync(
-                ringForStatus,
-                userIdForStatuses );
+            var result = await unitUnderTest.RecordCompletionAsync( ringForStatus, userIdForStatuses );
 
             // Assert
             Assert.IsFalse( result.Success );
@@ -228,158 +218,112 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task RecordCompletionAsync_NoApprovalRecordFound_AndDifferenceBetweenTotalPercentCompletedAndLastApprovedPercentIsLessThan30_StatusShouldBeUpdated_AndTheResponseSuccessFlagShouldBeTrue()
         {
-            
-            // Arrange
+            // Arrange - no approval record means we can add status
             var unitUnderTest = this.CreateProvider();
-            var ringForStatus =_fixture.Build<RingStatusUpdateModel>().Create();
+            var ringForStatus = _fixture.Build<RingStatusUpdateModel>().Create();
             var userIdForStatuses = USERID;
             mockRingRepository.Setup( m => m.GetRequirementStatusAsync( ringForStatus.RingId, ringForStatus.RingRequirementId, userIdForStatuses ) ).Returns( Task.FromResult( (RingStatus)null ) );
-            var ringApprovalsDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>(_fixture.Build<RingApproval>().CreateMany( 8 ) ) );
-            RingStatus addedRingStatus = null;
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( ringApprovalsDbSet.Object );
-            var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>(_fixture.Build<RingStatus>().CreateMany( 8 ) ), false, true );
-            mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
+            mockRingRepository.Setup( m => m.GetLatestPendingOrApprovedApprovalForRingAsync( ringForStatus.RingId, userIdForStatuses ) ).Returns( Task.FromResult( (RingApproval)null ) );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
-            var newRingStatus =_fixture.Build<RingStatus>().Create();
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            var newRingStatus = _fixture.Build<RingStatus>().Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
-
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
-
-            ringStatusesDbSet.Setup( m => m.Add( newRingStatus ) )
-                                                            .Callback<RingStatus>( ( s ) => addedRingStatus = s );
+            RingStatus capturedStatus = null;
+            mockRingRepository.Setup( m => m.PostRingStatusAsync( It.IsAny<RingStatus>() ) ).Callback<RingStatus>( s => capturedStatus = s ).Returns<RingStatus>( s => Task.FromResult( s ) );
 
             // Act
-            var result = await unitUnderTest.RecordCompletionAsync(
-                ringForStatus,
-                userIdForStatuses );
+            var result = await unitUnderTest.RecordCompletionAsync( ringForStatus, userIdForStatuses );
 
             // Assert
             Assert.IsTrue( result.Success );
-            Assert.AreSame( newRingStatus, addedRingStatus );
+            Assert.AreSame( newRingStatus, capturedStatus );
         }
 
         [Test]
         public async Task RecordCompletionAsync_NoApprovalRecordFound_AndNoStatusFoundForAnyRequirement_StatusShouldBeUpdated_AndTheResponseSuccessFlagShouldBeTrue()
         {
-            
             // Arrange
             var unitUnderTest = this.CreateProvider();
-            var ringForStatus =_fixture.Build<RingStatusUpdateModel>().Create();
+            var ringForStatus = _fixture.Build<RingStatusUpdateModel>().Create();
             var userIdForStatuses = USERID;
             mockRingRepository.Setup( m => m.GetRequirementStatusAsync( ringForStatus.RingId, ringForStatus.RingRequirementId, userIdForStatuses ) ).Returns( Task.FromResult( (RingStatus)null ) );
-            var ringApprovalsDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>(_fixture.Build<RingApproval>().CreateMany( 8 ) ) );
-            RingStatus addedRingStatus = null;
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( ringApprovalsDbSet.Object );
-            var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( new RingStatus[ 0 ] ), false, true );
-            mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
+            mockRingRepository.Setup( m => m.GetLatestPendingOrApprovedApprovalForRingAsync( ringForStatus.RingId, userIdForStatuses ) ).Returns( Task.FromResult( (RingApproval)null ) );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
-            var newRingStatus =_fixture.Build<RingStatus>().Create();
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            var newRingStatus = _fixture.Build<RingStatus>().Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
-
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
-
-            ringStatusesDbSet.Setup( m => m.Add( newRingStatus ) )
-                                                            .Callback<RingStatus>( ( s ) => addedRingStatus = s );
+            RingStatus capturedStatus = null;
+            mockRingRepository.Setup( m => m.PostRingStatusAsync( It.IsAny<RingStatus>() ) ).Callback<RingStatus>( s => capturedStatus = s ).Returns<RingStatus>( s => Task.FromResult( s ) );
 
             // Act
-            var result = await unitUnderTest.RecordCompletionAsync(
-                ringForStatus,
-                userIdForStatuses );
+            var result = await unitUnderTest.RecordCompletionAsync( ringForStatus, userIdForStatuses );
 
             // Assert
             Assert.IsTrue( result.Success );
-            Assert.AreSame( newRingStatus, addedRingStatus );
+            Assert.AreSame( newRingStatus, capturedStatus );
         }
 
         [Test]
         public async Task RecordCompletionAsync_ApprovedApprovalRecordFoundAndDifferenceBetweenTotalPercentCompletedAndLastApprovedPercentIsLessThan30_StatusShouldBeUpdated_AndNoApprovalRecordCreated_AndTheResponseSuccessFlagShouldBeTrue()
         {
-            
-            // Arrange
+            // Arrange - approved record means we can add more status
             var unitUnderTest = this.CreateProvider();
-            var ringForStatus =_fixture.Build<RingStatusUpdateModel>().Create();
+            var ringForStatus = _fixture.Build<RingStatusUpdateModel>().Create();
             var userIdForStatuses = USERID;
+            var approvedRecord = _fixture.Build<RingApproval>().With( r => r.RingId, ringForStatus.RingId ).With( r => r.UserId, userIdForStatuses ).With( r => r.ApprovedAt, DateTime.UtcNow ).Create();
             mockRingRepository.Setup( m => m.GetRequirementStatusAsync( ringForStatus.RingId, ringForStatus.RingRequirementId, userIdForStatuses ) ).Returns( Task.FromResult( (RingStatus)null ) );
-            var ringApprovalsDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>(_fixture.Build<RingApproval>().With( r => r.RecalledByWarriorTs, (DateTime?)null ).CreateMany( 10 ) ) );
-            ringApprovalsDbSet.Object.Skip( 4 ).First().RingId = ringForStatus.RingId;
-            RingStatus addedRingStatus = null;
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( ringApprovalsDbSet.Object );
-            var ringRequirements =_fixture.Build<RingRequirement>().With( rs => rs.Weight, 10 ).With( rs => rs.RingId, ringForStatus.RingId ).CreateMany( 10 );
-            var ringStatuses = ringRequirements.Take( 6 ).Select( rr => new RingStatus() { RingId = rr.RingId, RingRequirementId = rr.Id, UserId = userIdForStatuses, WarriorCompleted = DateTime.UtcNow } );
-            var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( ringStatuses ), false, true );
-            mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
+            mockRingRepository.Setup( m => m.GetLatestPendingOrApprovedApprovalForRingAsync( ringForStatus.RingId, userIdForStatuses ) ).Returns( Task.FromResult( approvedRecord ) );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
-            var newRingStatus =_fixture.Build<RingStatus>().Create();
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            var newRingStatus = _fixture.Build<RingStatus>().Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
-
-            ringStatusesDbSet.Setup( m => m.Add( newRingStatus ) )
-                                                            .Callback<RingStatus>( ( s ) => addedRingStatus = s );
-
+            RingStatus capturedStatus = null;
+            mockRingRepository.Setup( m => m.PostRingStatusAsync( It.IsAny<RingStatus>() ) ).Callback<RingStatus>( s => capturedStatus = s ).Returns<RingStatus>( s => Task.FromResult( s ) );
 
             // Act
-            var result = await unitUnderTest.RecordCompletionAsync(
-                ringForStatus,
-                userIdForStatuses );
+            var result = await unitUnderTest.RecordCompletionAsync( ringForStatus, userIdForStatuses );
 
             // Assert
             Assert.IsTrue( result.Success );
-            Assert.AreSame( newRingStatus, addedRingStatus );
-            ringApprovalsDbSet.Verify( r => r.Add( It.IsAny<RingApproval>() ), Times.Never );
+            Assert.AreSame( newRingStatus, capturedStatus );
+            mockRingRepository.Verify( m => m.AddApprovalEntry( It.IsAny<RingApproval>() ), Times.Never );
         }
 
         [Test]
         public async Task RecordCompletionAsync_PercentCompletedIs100_StatusShouldBeUpdated_AndTheResponseSuccessFlagShouldBeTrue()
         {
-            
-            // Arrange
+            // Arrange - approved record (100% complete scenario)
             var unitUnderTest = this.CreateProvider();
-            var ringForStatus =_fixture.Build<RingStatusUpdateModel>().Create();
+            var ringForStatus = _fixture.Build<RingStatusUpdateModel>().Create();
             var userIdForStatuses = USERID;
+            var approvedRecord = _fixture.Build<RingApproval>().With( r => r.RingId, ringForStatus.RingId ).With( r => r.UserId, userIdForStatuses ).With( r => r.ApprovedAt, DateTime.UtcNow ).Create();
             mockRingRepository.Setup( m => m.GetRequirementStatusAsync( ringForStatus.RingId, ringForStatus.RingRequirementId, userIdForStatuses ) ).Returns( Task.FromResult( (RingStatus)null ) );
-            var ringApprovalsDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>(_fixture.Build<RingApproval>().With( r => r.RecalledByWarriorTs, (DateTime?)null ).CreateMany( 10 ) ) );
-            ringApprovalsDbSet.Object.Skip( 4 ).First().RingId = ringForStatus.RingId;
-            RingStatus addedRingStatus = null;
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( ringApprovalsDbSet.Object );
-            var ringRequirements =_fixture.Build<RingRequirement>().With( rs => rs.Weight, 10 ).With( rs => rs.RingId, ringForStatus.RingId ).CreateMany( 10 );
-            var ringStatuses = ringRequirements.Take( 9 ).Select( rr => new RingStatus() { RingId = rr.RingId, RingRequirementId = rr.Id, UserId = userIdForStatuses, WarriorCompleted = DateTime.UtcNow } );
-            var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( ringStatuses ), false, true );
-            mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
+            mockRingRepository.Setup( m => m.GetLatestPendingOrApprovedApprovalForRingAsync( ringForStatus.RingId, userIdForStatuses ) ).Returns( Task.FromResult( approvedRecord ) );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
-            var newRingStatus =_fixture.Build<RingStatus>().With( rs => rs.RingId, ringForStatus.RingId ).With( rs => rs.RingRequirementId, ringRequirements.Last().Id ).Create();
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            var newRingStatus = _fixture.Build<RingStatus>().With( rs => rs.RingId, ringForStatus.RingId ).Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
-
-            ringStatusesDbSet.Setup( m => m.Add( newRingStatus ) )
-                                                            .Callback<RingStatus>( ( s ) => addedRingStatus = s );
+            RingStatus capturedStatus = null;
+            mockRingRepository.Setup( m => m.PostRingStatusAsync( It.IsAny<RingStatus>() ) ).Callback<RingStatus>( s => capturedStatus = s ).Returns<RingStatus>( s => Task.FromResult( s ) );
 
             // Act
-            var result = await unitUnderTest.RecordCompletionAsync(
-                ringForStatus,
-                userIdForStatuses );
+            var result = await unitUnderTest.RecordCompletionAsync( ringForStatus, userIdForStatuses );
 
             // Assert
             Assert.IsTrue( result.Success );
-            Assert.AreSame( newRingStatus, addedRingStatus );
+            Assert.AreSame( newRingStatus, capturedStatus );
         }
 
         [Test]
         public async Task GetPendingApprovalsAsync_Given_no_approval_records_Returns_an_empty_list()
         {
-            
-            // Arrange
+            // Arrange - repo returns empty (no records matching: !ApprovedAt, !Recalled, !Returned)
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
-            var ringApprovals =_fixture.Build<RingApproval>().With( ra => ra.ApprovedAt, (DateTime?)null ).CreateMany( 3 );
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) ).Object );
+            mockRingRepository.Setup( m => m.GetPendingApprovalDetailsAsync( userIdForStatuses ) ).Returns( Task.FromResult( Enumerable.Empty<PendingApprovalDetail>() ) );
 
             // Act
-            var result = await unitUnderTest.GetPendingApprovalsAsync(
-                userIdForStatuses );
+            var result = await unitUnderTest.GetPendingApprovalsAsync( userIdForStatuses );
 
             // Assert
             Assert.IsFalse( result.Any() );
@@ -388,16 +332,13 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task GetPendingApprovalsAsync_Given_no_unapproved_approval_records_Returns_an_empty_list()
         {
-            
-            // Arrange
+            // Arrange - repo returns empty (all records have ApprovedAt set)
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
-            var ringApprovals =_fixture.Build<RingApproval>().With( ra => ra.UserId, userIdForStatuses ).CreateMany( 3 );
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) ).Object );
+            mockRingRepository.Setup( m => m.GetPendingApprovalDetailsAsync( userIdForStatuses ) ).Returns( Task.FromResult( Enumerable.Empty<PendingApprovalDetail>() ) );
 
             // Act
-            var result = await unitUnderTest.GetPendingApprovalsAsync(
-                userIdForStatuses );
+            var result = await unitUnderTest.GetPendingApprovalsAsync( userIdForStatuses );
 
             // Assert
             Assert.IsFalse( result.Any() );
@@ -406,100 +347,75 @@ namespace WarriorsGuild.Tests.Providers
         [Test]
         public async Task GetPendingApprovalsAsync_Given_an_unapproved_approval_record_Returns_the_approval_record_with_recently_completed_requirements()
         {
-            
-            // Arrange
+            // Arrange - repo returns pre-computed PendingApprovalDetail
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
             var approvalRelatedRingId = Guid.NewGuid();
-            var ringApprovals =_fixture.Build<RingApproval>().With( ra => ra.ApprovedAt, (DateTime?)null ).With( ra => ra.RecalledByWarriorTs, (DateTime?)null ).With( ra => ra.ReturnedTs, (DateTime?)null ).CreateMany( 3 );
-            ringApprovals.Skip( 2 ).First().UserId = userIdForStatuses;
-            ringApprovals.Skip( 2 ).First().RingId = approvalRelatedRingId;
-            var relatedRequirements =_fixture.Build<RingRequirement>().With( rr => rr.RingId, approvalRelatedRingId ).CreateMany( 8 );
-            var relatedStatuses = relatedRequirements.Take( 3 ).Select( rr =>_fixture.Build<RingStatus>().With( rs => rs.RingId, approvalRelatedRingId )
-                                                                                                          .With( rs => rs.RingRequirementId, rr.Id )
-                                                                                                          .With( rs => rs.UserId, userIdForStatuses )
-                                                                                                          .With( ra => ra.RecalledByWarriorTs, (DateTime?)null ).With( ra => ra.ReturnedTs, (DateTime?)null ).Create() ).ToArray();
-            var unapprovedRelatedStatuses = relatedRequirements.Skip( 3 ).Take( 3 ).Select( rr =>_fixture.Build<RingStatus>().With( rs => rs.RingId, approvalRelatedRingId )
-                                                                                                            .With( rs => rs.RingRequirementId, rr.Id )
-                                                                                                          .With( rs => rs.GuardianCompleted, (DateTime?)null )
-                                                                                                          .With( rs => rs.UserId, userIdForStatuses )
-                                                                                                          .With( ra => ra.RecalledByWarriorTs, (DateTime?)null ).With( ra => ra.ReturnedTs, (DateTime?)null ).Create() ).ToArray();
-            var requirements =_fixture.Build<RingRequirement>().CreateMany( 10 ).Concat( relatedRequirements );
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) ).Object );
-            mockGuildDbContext.Setup( m => m.RingRequirements ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingRequirement>( requirements ) ).Object );
-            mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( relatedStatuses.Concat( unapprovedRelatedStatuses ) ) ).Object );
-
+            var approvalId = Guid.NewGuid();
+            var relatedRequirements = _fixture.Build<RingRequirement>().With( rr => rr.RingId, approvalRelatedRingId ).CreateMany( 8 ).ToArray();
+            var unconfirmedReqs = relatedRequirements.Skip( 3 ).Take( 3 );
+            var ring = _fixture.Build<Ring>().With( r => r.Id, approvalRelatedRingId ).Create();
+            var expectedDetail = new PendingApprovalDetail
+            {
+                ApprovalRecordId = approvalId,
+                RingId = approvalRelatedRingId,
+                RingName = ring.Name,
+                RingImageUploaded = ring.ImageUploaded,
+                WarriorCompleted = DateTime.UtcNow,
+                ImageExtension = ring.ImageExtension,
+                UnconfirmedRequirements = unconfirmedReqs
+            };
+            mockRingRepository.Setup( m => m.GetPendingApprovalDetailsAsync( userIdForStatuses ) ).Returns( Task.FromResult( new[] { expectedDetail }.AsEnumerable() ) );
 
             // Act
-            var result = await unitUnderTest.GetPendingApprovalsAsync(
-                userIdForStatuses );
+            var result = await unitUnderTest.GetPendingApprovalsAsync( userIdForStatuses );
 
             // Assert
             Assert.AreEqual( 1, result.Count() );
             var resultRecord = result.First();
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().Id, resultRecord.ApprovalRecordId );
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().RingId, resultRecord.RingId );
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().Ring.Name, resultRecord.RingName );
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().Ring.ImageUploaded, resultRecord.RingImageUploaded );
-            Assert.IsTrue( resultRecord.UnconfirmedRequirements.SequenceEqual( relatedRequirements.Skip( 3 ).Take( 3 ) ) );
+            Assert.AreEqual( approvalId, resultRecord.ApprovalRecordId );
+            Assert.AreEqual( approvalRelatedRingId, resultRecord.RingId );
+            Assert.AreEqual( ring.Name, resultRecord.RingName );
+            Assert.AreEqual( ring.ImageUploaded, resultRecord.RingImageUploaded );
+            Assert.IsTrue( resultRecord.UnconfirmedRequirements.SequenceEqual( unconfirmedReqs ) );
         }
 
         [Test]
         public async Task GetPendingApprovalsAsync_Given_a_list_of_approval_records_Returns_the_approval_records_with_related_recently_completed_requirements()
         {
-            
-            // Arrange
+            // Arrange - repo returns pre-computed PendingApprovalDetail list
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
             var approvalRelatedRingId = Guid.NewGuid();
             var approvalRelatedRingId2 = Guid.NewGuid();
-            var ringApprovals =_fixture.Build<RingApproval>().Without( ra => ra.ApprovedAt ).Without( ra => ra.RecalledByWarriorTs ).Without( ra => ra.ReturnedTs ).CreateMany( 8 );
-            ringApprovals.Skip( 2 ).First().UserId = userIdForStatuses;
-            ringApprovals.Skip( 2 ).First().RingId = approvalRelatedRingId;
-            ringApprovals.Skip( 4 ).First().UserId = userIdForStatuses;
-            ringApprovals.Skip( 4 ).First().RingId = approvalRelatedRingId2;
-            var relatedRequirements =_fixture.Build<RingRequirement>().With( rr => rr.RingId, approvalRelatedRingId ).CreateMany( 8 );
-            var relatedRequirements2 =_fixture.Build<RingRequirement>().With( rr => rr.RingId, approvalRelatedRingId2 ).CreateMany( 8 );
-            var relatedStatuses = relatedRequirements.Take( 3 ).Select( rr =>_fixture.Build<RingStatus>().With( rs => rs.RingId, approvalRelatedRingId )
-                                                                                                          .With( rs => rs.RingRequirementId, rr.Id )
-                                                                                                          .With( rs => rs.UserId, userIdForStatuses )
-                                                                                                          .Without( ra => ra.RecalledByWarriorTs ).Without( ra => ra.ReturnedTs ).Create() ).ToArray();
-            var unapprovedRelatedStatuses = relatedRequirements.Skip( 3 ).Take( 3 ).Select( rr =>_fixture.Build<RingStatus>().With( rs => rs.RingId, approvalRelatedRingId )
-                                                                                                            .With( rs => rs.RingRequirementId, rr.Id )
-                                                                                                          .With( rs => rs.GuardianCompleted, (DateTime?)null )
-                                                                                                          .With( rs => rs.UserId, userIdForStatuses )
-                                                                                                          .Without( ra => ra.RecalledByWarriorTs ).Without( ra => ra.ReturnedTs ).Create() ).ToArray();
-            var relatedStatuses2 = relatedRequirements2.Take( 3 ).Select( rr =>_fixture.Build<RingStatus>().With( rs => rs.RingId, approvalRelatedRingId2 )
-                                                                                                          .With( rs => rs.RingRequirementId, rr.Id )
-                                                                                                          .With( rs => rs.UserId, userIdForStatuses )
-                                                                                                          .Without( ra => ra.RecalledByWarriorTs ).Without( ra => ra.ReturnedTs ).Create() ).ToArray();
-            var unapprovedRelatedStatuses2 = relatedRequirements2.Skip( 3 ).Take( 3 ).Select( rr =>_fixture.Build<RingStatus>().With( rs => rs.RingId, approvalRelatedRingId2 )
-                                                                                                            .With( rs => rs.RingRequirementId, rr.Id )
-                                                                                                          .With( rs => rs.GuardianCompleted, (DateTime?)null )
-                                                                                                          .With( rs => rs.UserId, userIdForStatuses )
-                                                                                                          .Without( ra => ra.RecalledByWarriorTs ).Without( ra => ra.ReturnedTs ).Create() ).ToArray();
-            var requirements =_fixture.Build<RingRequirement>().CreateMany( 10 ).Concat( relatedRequirements ).Concat( relatedRequirements2 );
-            mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) ).Object );
-            mockGuildDbContext.Setup( m => m.RingRequirements ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingRequirement>( requirements ) ).Object );
-            mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( relatedStatuses.Concat( unapprovedRelatedStatuses ).Concat( relatedStatuses2 ).Concat( unapprovedRelatedStatuses2 ) ) ).Object );
-
+            var approvalId1 = Guid.NewGuid();
+            var approvalId2 = Guid.NewGuid();
+            var relatedRequirements = _fixture.Build<RingRequirement>().With( rr => rr.RingId, approvalRelatedRingId ).CreateMany( 8 ).ToArray();
+            var relatedRequirements2 = _fixture.Build<RingRequirement>().With( rr => rr.RingId, approvalRelatedRingId2 ).CreateMany( 8 ).ToArray();
+            var ring1 = _fixture.Build<Ring>().With( r => r.Id, approvalRelatedRingId ).Create();
+            var ring2 = _fixture.Build<Ring>().With( r => r.Id, approvalRelatedRingId2 ).Create();
+            var expectedDetails = new[]
+            {
+                new PendingApprovalDetail { ApprovalRecordId = approvalId1, RingId = approvalRelatedRingId, RingName = ring1.Name, RingImageUploaded = ring1.ImageUploaded, WarriorCompleted = DateTime.UtcNow, ImageExtension = ring1.ImageExtension, UnconfirmedRequirements = relatedRequirements.Skip( 3 ).Take( 3 ) },
+                new PendingApprovalDetail { ApprovalRecordId = approvalId2, RingId = approvalRelatedRingId2, RingName = ring2.Name, RingImageUploaded = ring2.ImageUploaded, WarriorCompleted = DateTime.UtcNow, ImageExtension = ring2.ImageExtension, UnconfirmedRequirements = relatedRequirements2.Skip( 3 ).Take( 3 ) }
+            };
+            mockRingRepository.Setup( m => m.GetPendingApprovalDetailsAsync( userIdForStatuses ) ).Returns( Task.FromResult( expectedDetails.AsEnumerable() ) );
 
             // Act
-            var result = await unitUnderTest.GetPendingApprovalsAsync(
-                userIdForStatuses );
+            var result = await unitUnderTest.GetPendingApprovalsAsync( userIdForStatuses );
 
             // Assert
             Assert.AreEqual( 2, result.Count() );
             var resultRecord = result.First();
             var resultRecord2 = result.Skip( 1 ).First();
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().Id, resultRecord.ApprovalRecordId );
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().RingId, resultRecord.RingId );
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().Ring.Name, resultRecord.RingName );
-            Assert.AreEqual( ringApprovals.Skip( 2 ).First().Ring.ImageUploaded, resultRecord.RingImageUploaded );
-            Assert.AreEqual( ringApprovals.Skip( 4 ).First().Id, resultRecord2.ApprovalRecordId );
-            Assert.AreEqual( ringApprovals.Skip( 4 ).First().RingId, resultRecord2.RingId );
-            Assert.AreEqual( ringApprovals.Skip( 4 ).First().Ring.Name, resultRecord2.RingName );
-            Assert.AreEqual( ringApprovals.Skip( 4 ).First().Ring.ImageUploaded, resultRecord2.RingImageUploaded );
+            Assert.AreEqual( approvalId1, resultRecord.ApprovalRecordId );
+            Assert.AreEqual( approvalRelatedRingId, resultRecord.RingId );
+            Assert.AreEqual( ring1.Name, resultRecord.RingName );
+            Assert.AreEqual( ring1.ImageUploaded, resultRecord.RingImageUploaded );
+            Assert.AreEqual( approvalId2, resultRecord2.ApprovalRecordId );
+            Assert.AreEqual( approvalRelatedRingId2, resultRecord2.RingId );
+            Assert.AreEqual( ring2.Name, resultRecord2.RingName );
+            Assert.AreEqual( ring2.ImageUploaded, resultRecord2.RingImageUploaded );
             Assert.IsTrue( resultRecord.UnconfirmedRequirements.SequenceEqual( relatedRequirements.Skip( 3 ).Take( 3 ) ) );
             Assert.IsTrue( resultRecord2.UnconfirmedRequirements.SequenceEqual( relatedRequirements2.Skip( 3 ).Take( 3 ) ) );
         }
@@ -618,7 +534,7 @@ namespace WarriorsGuild.Tests.Providers
             requirementStatus.AddRange( dummyStatuses );
             mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( requirementStatus ) ).Object );
             var currentDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
             mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) ).Object );
 
             mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );

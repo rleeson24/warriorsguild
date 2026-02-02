@@ -173,10 +173,9 @@ namespace WarriorsGuild.Tests.Areas.Rings.Controllers
         private RingStatusController AddClaimToContoller( RingStatusController controller, bool includeUserId )
         {
             _mockContext = new Mock<HttpContext>( MockBehavior.Strict );
-            controller.ControllerContext = new ControllerContext()
-            {
-                HttpContext = _mockContext.Object
-            };
+            if ( _request != null )
+                _mockContext.Setup( m => m.Request ).Returns( _request.Object );
+            controller.ControllerContext = new ControllerContext() { HttpContext = _mockContext.Object };
             ClaimsPrincipal identity = null;
             if ( includeUserId )
             {
@@ -346,150 +345,74 @@ namespace WarriorsGuild.Tests.Areas.Rings.Controllers
         [TestCase( null, null )]
         [TestCase( null, "D3F2AF90-6583-412D-B427-307D847EAF12" )]
         [TestCase( "7A5F168C-B3EE-4C56-9FE2-980A0910B8CC", null )]
-        public async Task UploadProofOfCompletion_Given_FormData_does_not_contain_reqId_and_ringId_Throws_exception( Guid? reqId, Guid? ringId )
+        public async Task UploadProofOfCompletion_Given_FormData_does_not_contain_reqId_and_ringId_Throws_exception( string reqIdStr, string ringIdStr )
         {
+            var unitUnderTest = AddClaimToContoller( CreateRingStatusController() );
+            var formData = new NameValueCollection();
+            if ( !string.IsNullOrEmpty( ringIdStr ) ) formData.Add( "ringId", ringIdStr );
+            if ( !string.IsNullOrEmpty( reqIdStr ) ) formData.Add( "reqId", reqIdStr );
+            var parsedRequest = new MultipartParsedRequest { FormData = formData, FileData = Array.Empty<MultipartFileData>() };
 
-            // Arrange
-            //var unitUnderTest = AddClaimToContoller( CreateRingStatusController() );
-            //unitUnderTest.Request = new HttpRequestMessage();
+            mockUserProvider.Setup( m => m.GetMyUserId( It.IsAny<ClaimsPrincipal>() ) ).Returns( USER_ID );
+            mockMultipartReader.Setup( m => m.Read( It.IsAny<HttpRequest>(), It.IsAny<ModelStateDictionary>(), It.IsAny<string[]>(), It.IsAny<long>(), It.IsAny<Func<MultipartParsedRequest, Task>>() ) )
+                .Callback<HttpRequest, ModelStateDictionary, string[], long, Func<MultipartParsedRequest, Task>>( ( req, ms, ext, lim, callback ) => callback( parsedRequest ).GetAwaiter().GetResult() )
+                .Returns( Task.CompletedTask );
 
-            //// Add the text keys/values
-            //var formData = new MultipartParseResult();
-            //if ( ringId.HasValue ) formData.FormData.Add( "ringId", ringId.ToString() );
-            //if ( reqId.HasValue ) formData.FormData.Add( "reqId", reqId.ToString() );
-
-            //unitUnderTest.Request.Content = MultipartFormDataContent( "testing" + Guid.NewGuid(), formData.FormData );
-            //unitUnderTest.Request.Properties.Add( HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration() );
-            //mockUserProvider.Setup( m => m.ValidateUserId( USER_ID.ToString() ) ).Returns( Task.FromResult<string>( null ) );
-
-            //var claim = new Claim( "id", USER_ID.ToString() );
-            //this.mockIdentity.Setup( m => m.FindFirst( It.IsAny<String>() ) ).Returns( claim );
-            //this.mockPrincipal.Setup( ip => ip.Identity ).Returns( mockIdentity.Object );
-            //
-            //var streamProvider =_fixture.Create<MultipartFormDataStreamProvider>();
-            //mockMultipartReader.Setup( m => m.ParseDataAsync( unitUnderTest.Request, It.IsAny<Func<MultipartFormDataStreamProvider, Task<MultipartParseResult>>>() ) )
-            //                    .Callback<HttpRequestMessage, Func<MultipartFormDataStreamProvider, Task<MultipartParseResult>>>( ( req, func ) => func.Invoke( streamProvider ) ).Returns( Task.FromResult( formData ) );
-
-            //try
-            //{
-            //    // Act
-            //    var result = await unitUnderTest.UploadProofOfCompletion();
-            //}
-            //catch ( Exception ex )
-            //{
-            //    Assert.Pass();
-            //}
-            Assert.Fail();
+            Assert.ThrowsAsync( Is.InstanceOf<Exception>(), async () => await unitUnderTest.UploadProofOfCompletion() );
         }
 
         [Test]
         public async Task UploadProofOfCompletion_Given_FormData_contains_reqId_and_ringId_Returns_Ok()
         {
-            //
-            //// Arrange
-            //var unitUnderTest = AddClaimToContoller( CreateRingStatusController() );
-            //unitUnderTest.Request = new HttpRequestMessage();
+            var ringId = Guid.Parse( "D3F2AF90-6583-412D-B427-307D847EAF12" );
+            var reqId = Guid.Parse( "7A5F168C-B3EE-4C56-9FE2-980A0910B8CC" );
+            var formData = new NameValueCollection { { "ringId", ringId.ToString() }, { "reqId", reqId.ToString() } };
+            var parsedRequest = new MultipartParsedRequest { FormData = formData, FileData = Array.Empty<MultipartFileData>() };
+            var attachmentIds = _fixture.CreateMany<Guid>( 2 ).ToList();
+            var updateModel = _fixture.Create<RingStatusUpdateModel>();
+            var recordCompletionResponse = new RecordRingCompletionResponse { Error = String.Empty, Success = true };
 
-            //var ringId = Guid.Parse( "D3F2AF90-6583-412D-B427-307D847EAF12" );
-            //var reqId = Guid.Parse( "7A5F168C-B3EE-4C56-9FE2-980A0910B8CC" );
-            //// Add the text keys/values
-            //var formData = new MultipartParseResult();
-            //formData.FormData.Add( "ringId", ringId.ToString() );
-            //formData.FormData.Add( "reqId", reqId.ToString() );
-            //List<Guid> attachmentIds =_fixture.CreateMany<Guid>( 2 ).ToList();
-            //formData.AttachmentIds = attachmentIds;
+            var unitUnderTest = AddClaimToContoller( CreateRingStatusController() );
+            mockUserProvider.Setup( m => m.GetMyUserId( It.IsAny<ClaimsPrincipal>() ) ).Returns( USER_ID );
+            mockMultipartReader.Setup( m => m.Read( It.IsAny<HttpRequest>(), It.IsAny<ModelStateDictionary>(), It.IsAny<string[]>(), It.IsAny<long>(), It.IsAny<Func<MultipartParsedRequest, Task>>() ) )
+                .Callback<HttpRequest, ModelStateDictionary, string[], long, Func<MultipartParsedRequest, Task>>( ( req, ms, ext, lim, callback ) => callback( parsedRequest ).GetAwaiter().GetResult() )
+                .Returns( Task.CompletedTask );
+            mockRecordRingCompletionProcess.Setup( m => m.UploadAttachmentsForRingReq( ringId, reqId, parsedRequest.FileData, USER_ID ) ).ReturnsAsync( attachmentIds );
+            mockRingMapper.Setup( m => m.CreateRingStatusUpdateModel( ringId, reqId ) ).Returns( updateModel );
+            mockRingsProvider.Setup( m => m.RecordCompletionAsync( updateModel, USER_ID ) ).ReturnsAsync( recordCompletionResponse );
+            mockLogger.Setup( x => x.Log( It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception, string>>() ) );
 
-            //unitUnderTest.Request.Content = MultipartFormDataContent( "testingSuccess", formData.FormData );
-            //unitUnderTest.Request.Properties.Add( HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration() );
-            //mockUserProvider.Setup( m => m.ValidateUserId( USER_ID.ToString() ) ).Returns( Task.FromResult<string>( null ) );
-
-            //var claim = new Claim( "id", USER_ID.ToString() );
-            //this.mockIdentity.Setup( m => m.FindFirst( It.IsAny<String>() ) ).Returns( claim );
-            //this.mockPrincipal.Setup( ip => ip.Identity ).Returns( mockIdentity.Object );
-            //var streamProvider =_fixture.Create<MultipartFormDataStreamProvider>();
-            //mockMultipartReader.Setup( m => m.ParseDataAsync( unitUnderTest.Request, It.IsAny<Func<MultipartFormDataStreamProvider, Task<MultipartParseResult>>>() ) )
-            //                    .Callback<HttpRequestMessage, Func<MultipartFormDataStreamProvider, Task<MultipartParseResult>>>( ( req, func ) => func.Invoke( streamProvider ) ).Returns( Task.FromResult( formData ) );
-            //mockMultipartReader.Setup( m => m.GetFormFields( streamProvider.FormData, It.Is<IEnumerable<String>>( s => s.SequenceEqual( new[] { "ringId", "reqId" } ) ) ) ).Returns( formData.FormData );
-
-
-            //var fileData =_fixture.Build<MultipartFileData>().FromFactory( () => new MultipartFileData() ).Create();
-            //var fileUploadData =_fixture.CreateMany<WarriorsGuild.Processes.Models.FileUploadData>( 5 );
-            //mockMultipartReader.Setup( m => m.CreateFileUploadData( streamProvider.FileData ) ).Returns( fileUploadData );
-            //mockRecordCompletionProcess.Setup( m => m.UploadAttachmentsForRingReq( ringId, reqId, fileUploadData, USER_ID ) )
-            //                            .Returns( Task.FromResult( attachmentIds ) );
-
-            //var updateModel =_fixture.Create<RingStatusUpdateModel>();
-            //mockRingMapper.Setup( m => m.CreateRingStatusUpdateModel( formData.FormData ) ).Returns( updateModel );
-
-            //var recordCompletionResponse = new RecordCompletionResponse()
-            //{
-            //    Error = String.Empty,
-            //    Success = true
-            //};
-            //mockRingsProvider.Setup( m => m.RecordCompletionAsync( updateModel, USER_ID ) ).Returns( Task.FromResult( recordCompletionResponse ) );
-
-            //// Act
-            //var result = await unitUnderTest.UploadProofOfCompletion();
-            //var contentResult = result as ActionResult<IEnumerable<Guid>>;
-            //// Assert
-            //Assert.IsNotNull( contentResult );
-            //Assert.AreSame( attachmentIds, contentResult.Value );
-            Assert.Fail();
+            var result = await unitUnderTest.UploadProofOfCompletion();
+            Assert.IsInstanceOf<OkObjectResult>( result.Result );
+            var contentResult = (OkObjectResult)result.Result;
+            Assert.AreSame( attachmentIds, contentResult.Value );
         }
 
         [Test]
         public async Task UploadProofOfCompletion_Given_Provider_RecordCompletion_has_error_message_Returns_BadRequest()
         {
-            // Arrange
-            //var unitUnderTest = AddClaimToContoller( CreateRingStatusController() );
-            //unitUnderTest.Request = new HttpRequestMessage();
+            var ringId = Guid.Parse( "D3F2AF90-6583-412D-B427-307D847EAF12" );
+            var reqId = Guid.Parse( "7A5F168C-B3EE-4C56-9FE2-980A0910B8CC" );
+            var formData = new NameValueCollection { { "ringId", ringId.ToString() }, { "reqId", reqId.ToString() } };
+            var parsedRequest = new MultipartParsedRequest { FormData = formData, FileData = Array.Empty<MultipartFileData>() };
+            var attachmentIds = _fixture.CreateMany<Guid>( 2 ).ToList();
+            var updateModel = _fixture.Create<RingStatusUpdateModel>();
+            var recordCompletionResponse = new RecordRingCompletionResponse { Error = "An error occurred", Success = false };
 
-            //var ringId = Guid.Parse( "D3F2AF90-6583-412D-B427-307D847EAF12" );
-            //var reqId = Guid.Parse( "7A5F168C-B3EE-4C56-9FE2-980A0910B8CC" );
-            //// Add the text keys/values
-            //var formData = new MultipartParseResult();
-            //formData.FormData.Add( "ringId", ringId.ToString() );
-            //formData.FormData.Add( "reqId", reqId.ToString() );
+            var unitUnderTest = AddClaimToContoller( CreateRingStatusController() );
+            mockUserProvider.Setup( m => m.GetMyUserId( It.IsAny<ClaimsPrincipal>() ) ).Returns( USER_ID );
+            mockMultipartReader.Setup( m => m.Read( It.IsAny<HttpRequest>(), It.IsAny<ModelStateDictionary>(), It.IsAny<string[]>(), It.IsAny<long>(), It.IsAny<Func<MultipartParsedRequest, Task>>() ) )
+                .Callback<HttpRequest, ModelStateDictionary, string[], long, Func<MultipartParsedRequest, Task>>( ( req, ms, ext, lim, callback ) => callback( parsedRequest ).GetAwaiter().GetResult() )
+                .Returns( Task.CompletedTask );
+            mockRecordRingCompletionProcess.Setup( m => m.UploadAttachmentsForRingReq( ringId, reqId, parsedRequest.FileData, USER_ID ) ).ReturnsAsync( attachmentIds );
+            mockRingMapper.Setup( m => m.CreateRingStatusUpdateModel( ringId, reqId ) ).Returns( updateModel );
+            mockRingsProvider.Setup( m => m.RecordCompletionAsync( updateModel, USER_ID ) ).ReturnsAsync( recordCompletionResponse );
+            mockLogger.Setup( x => x.Log( It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception, string>>() ) );
 
-            //unitUnderTest.Request.Content = MultipartFormDataContent( "testingErrorMessage" + DateTime.UtcNow.ToString( "HHmmssffffff" ), formData.FormData );
-            //unitUnderTest.Request.Properties.Add( HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration() );
-            //mockUserProvider.Setup( m => m.ValidateUserId( USER_ID.ToString() ) ).Returns( Task.FromResult<string>( null ) );
-
-            //var claim = new Claim( "id", USER_ID.ToString() );
-            //this.mockIdentity.Setup( m => m.FindFirst( It.IsAny<String>() ) ).Returns( claim );
-            //this.mockPrincipal.Setup( ip => ip.Identity ).Returns( mockIdentity.Object );
-            //
-            //var streamProvider =_fixture.Create<MultipartFormDataStreamProvider>();
-            //mockMultipartReader.Setup( m => m.ParseDataAsync( unitUnderTest.Request, It.IsAny<Func<MultipartFormDataStreamProvider, Task<MultipartParseResult>>>() ) )
-            //                    .Callback<HttpRequestMessage, Func<MultipartFormDataStreamProvider, Task<MultipartParseResult>>>( ( req, func ) => func.Invoke( streamProvider ) ).Returns( Task.FromResult( formData ) );
-            //mockMultipartReader.Setup( m => m.GetFormFields( streamProvider.FormData, It.Is<IEnumerable<String>>( s => s.SequenceEqual( new[] { "ringId", "reqId" } ) ) ) ).Returns( formData.FormData );
-
-
-            //var fileData =_fixture.Build<MultipartFileData>().FromFactory( () => new MultipartFileData( unitUnderTest.Request.Content.Headers, "sadfds" ) ).Create();
-            //var fileUploadData =_fixture.CreateMany<WarriorsGuild.Processes.Models.FileUploadData>( 5 );
-            //mockMultipartReader.Setup( m => m.CreateFileUploadData( streamProvider.FileData ) ).Returns( fileUploadData );
-            //List<Guid> attachmentIds =_fixture.CreateMany<Guid>( 2 ).ToList();
-            //mockRecordCompletionProcess.Setup( m => m.UploadAttachmentsForRingReq( ringId, reqId, fileUploadData, USER_ID ) )
-            //                            .Returns( Task.FromResult( attachmentIds ) );
-
-            //var updateModel =_fixture.Create<RingStatusUpdateModel>();
-            //mockRingMapper.Setup( m => m.CreateRingStatusUpdateModel( formData.FormData ) ).Returns( updateModel );
-
-            //var recordCompletionResponse = new RecordCompletionResponse()
-            //{
-            //    Error = "An error occurred",
-            //    Success = false
-            //};
-            //mockRingsProvider.Setup( m => m.RecordCompletionAsync( updateModel, USER_ID ) ).Returns( Task.FromResult( recordCompletionResponse ) );
-
-            //// Act
-            //var result = await unitUnderTest.UploadProofOfCompletion();
-            //var contentResult = result as BadRequestErrorMessageResult;
-
-            //// Assert
-            //Assert.AreEqual( recordCompletionResponse.Error, contentResult.Message );
-
-            Assert.Fail();
+            var result = await unitUnderTest.UploadProofOfCompletion();
+            Assert.IsInstanceOf<BadRequestObjectResult>( result.Result );
+            var contentResult = (BadRequestObjectResult)result.Result;
+            Assert.AreEqual( recordCompletionResponse.Error, contentResult.Value );
         }
 
         [Test]

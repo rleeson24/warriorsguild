@@ -1,4 +1,3 @@
-﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -26,19 +25,18 @@ namespace WarriorsGuild.Ranks
         private IRankMapper _rankMapper { get; }
         private IBlobProvider _fileProvider { get; }
         private IRanksProviderHelpers RpHelpers { get; }
-        private IHelpers Helpers { get; }
-
-        private IGuildDbContext _dbContext { get; }
+        private IDateTimeProvider _dateTimeProvider { get; }
+        private IUnitOfWork _uow { get; }
         private IRankRepository _repo { get; }
 
-        public RankStatusProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IHelpers helpers, IRanksProviderHelpers rpHelpers,
+        public RankStatusProvider( IUnitOfWork uow, IRankRepository repo, IRankMapper rankMapper, IDateTimeProvider dateTimeProvider, IRanksProviderHelpers rpHelpers,
                             IBlobProvider fileProvider )
         {
-            _dbContext = dbContext;
+            _uow = uow;
             _rankMapper = rankMapper;
             _fileProvider = fileProvider;
             RpHelpers = rpHelpers;
-            Helpers = helpers;
+            _dateTimeProvider = dateTimeProvider;
             _repo = repo;
         }
         public IQueryable<RankStatus> RankStatuses()
@@ -61,18 +59,16 @@ namespace WarriorsGuild.Ranks
 
                 if ( ss == null )
                 {
-                    var approvalrecord = await _dbContext.RankApprovals.Where( ra => ra.UserId == userIdForStatuses && ra.RankId == rankForStatus.RankId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue ).OrderByDescending( r => r.CompletedAt ).FirstOrDefaultAsync();
+                    var approvalrecord = await _repo.GetLatestPendingOrApprovedRankApprovalAsync( rankForStatus.RankId, userIdForStatuses );
                     var percentApproved = approvalrecord?.PercentComplete ?? 0;
                     if ( approvalrecord == null || approvalrecord.ApprovedAt.HasValue )
                     {
                         int totalCompleted = await RpHelpers.GetTotalCompletedPercent( rankForStatus.RankId, userIdForStatuses );
                         if ( totalCompleted - percentApproved < 33 )
                         {
-                            var statusToSave = _rankMapper.CreateRankStatus( rankForStatus.RankId, rankForStatus.RankRequirementId, warriorCompletedTs: Helpers.GetCurrentDateTime(), null, userIdForStatuses );
+                            var statusToSave = _rankMapper.CreateRankStatus( rankForStatus.RankId, rankForStatus.RankRequirementId, warriorCompletedTs: _dateTimeProvider.GetCurrentDateTime(), null, userIdForStatuses );
                             response.Status = statusToSave;
-                            _dbContext.RankStatuses.Add( statusToSave );
-
-                            await _dbContext.SaveChangesAsync();
+                            await _repo.PostRankStatusAsync( statusToSave );
                             response.Success = true;
                         }
                         else
@@ -102,50 +98,15 @@ namespace WarriorsGuild.Ranks
             return response;
         }
 
-        public async Task<RecordCompletionResponse> DeleteRankStatusAsync( RankStatusUpdateModel rankForStatus, Guid userIdForStatuses )
+        public Task<RecordCompletionResponse> DeleteRankStatusAsync( RankStatusUpdateModel rankForStatus, Guid userIdForStatuses )
         {
-            var response = new RecordCompletionResponse();
-            var rankStatus = await _dbContext.RankStatuses.FirstOrDefaultAsync( rs => rs.RankId == rankForStatus.RankId && rs.RankRequirementId == rankForStatus.RankRequirementId && rs.UserId == userIdForStatuses && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue );
-            if ( rankStatus == null )
-            {
-                response.Error = "The given requirement is not marked as complete";
-            }
-            else if ( rankStatus.GuardianCompleted.HasValue )
-            {
-                response.Error = "This requirement completion cannot be undone because it has already been approved";
-            }
-            else
-            {
-                rankStatus.RecalledByWarriorTs = DateTime.UtcNow;
-                var pocToDelete = await _dbContext.ProofOfCompletionAttachments.Where( a => a.RequirementId == rankForStatus.RankRequirementId && a.UserId == userIdForStatuses ).ToArrayAsync();
-                foreach ( var p in pocToDelete )
-                {
-                    _dbContext.SetDeleted( p );
-                }
-                var crossesToDelete = await _dbContext.RankStatusCrosses.Where( c => c.RankId == rankForStatus.RankId
-                                                                            && c.RankRequirementId == rankForStatus.RankRequirementId
-                                                                            && c.UserId == userIdForStatuses ).ToArrayAsync();
-                foreach ( var c in crossesToDelete )
-                {
-                    _dbContext.RankStatusCrosses.Remove( c );
-                }
-                var ringsToDelete = await _dbContext.RankStatusRings.Where( c => c.RankId == rankForStatus.RankId
-                                                                            && c.RankRequirementId == rankForStatus.RankRequirementId
-                                                                            && c.UserId == userIdForStatuses ).ToArrayAsync();
-                foreach ( var c in ringsToDelete )
-                {
-                    _dbContext.RankStatusRings.Remove( c );
-                }
-                await _dbContext.SaveChangesAsync();
-                response.Success = true;
-            }
-            return response;
+            return _repo.DeleteRankStatusWithRelatedAsync( rankForStatus, userIdForStatuses );
         }
 
         public async Task<RankStatus> PostRankStatusAsync( RankStatus rankStatus )
         {
             _repo.AddStatusEntry( rankStatus );
-            await _dbContext.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
             return rankStatus;
         }
 
@@ -154,15 +115,14 @@ namespace WarriorsGuild.Ranks
             return await _fileProvider.UploadFileAsync( WarriorsGuildFileType.ProofOfCompletion, file, attachmentId.ToString(), mediaType );
         }
 
-        public async Task<ProofOfCompletionAttachment> GetProofOfCompletionAttachmentByIdAsync( Guid attachmentId )
+        public Task<ProofOfCompletionAttachment> GetProofOfCompletionAttachmentByIdAsync( Guid attachmentId )
         {
-            return await _dbContext.ProofOfCompletionAttachments.SingleOrDefaultAsync( a => a.Id == attachmentId );
+            return _repo.GetProofOfCompletionAttachmentByIdAsync( attachmentId );
         }
 
-        public async Task SaveProofOfCompletionOneUseFileKeyAsync( Guid attachmentId, Guid fileKey )
+        public Task SaveProofOfCompletionOneUseFileKeyAsync( Guid attachmentId, Guid fileKey )
         {
-            _dbContext.SingleUseFileDownloadKey.Add( new SingleUseFileDownloadKey() { AttachmentId = attachmentId, Key = fileKey } );
-            await _dbContext.SaveChangesAsync();
+            return _repo.SaveProofOfCompletionOneUseFileKeyAsync( attachmentId, fileKey );
         }
 
         public async Task<Guid> RecordProofOfCompletionDocumentAsync( Guid reqId, Guid userId, string fileName, string extension )
@@ -174,53 +134,31 @@ namespace WarriorsGuild.Ranks
                 FileExtension = extension,
                 UserId = userId
             };
-            _dbContext.ProofOfCompletionAttachments.Add( entity );
-            await _dbContext.SaveChangesAsync();
-            return entity.Id;
+            return await _repo.AddProofOfCompletionAttachmentAsync( entity );
         }
 
         public async Task<FileDetail> GetProofOfCompletionAsync( Guid oneUseFileKey )
         {
-            var attachment = await _dbContext.ProofOfCompletionAttachments
-                                    .Where( poca => _dbContext.SingleUseFileDownloadKey.Any( a => a.Key == oneUseFileKey
-                                                                                                && a.AttachmentId == poca.Id ) ).SingleOrDefaultAsync();
-
+            var attachment = await _repo.GetAndConsumeProofOfCompletionByFileKeyAsync( oneUseFileKey );
+            if ( attachment == null )
+                return null;
             var filePath = await _fileProvider.DownloadFile( WarriorsGuildFileType.ProofOfCompletion, attachment.StorageKey );
-            var keyObject = await _dbContext.SingleUseFileDownloadKey.FindAsync( oneUseFileKey );
-            _dbContext.SingleUseFileDownloadKey.Remove( keyObject );
-            await _dbContext.SaveChangesAsync();
             return new FileDetail( filePath.FilePathToServe, oneUseFileKey + attachment.FileExtension, filePath.ContentType );
         }
 
-        public async Task<IEnumerable<MinimalCrossDetail>> GetCrossesForRankStatus( Guid rankId, Guid requirementId, Guid userIdForStatuses )
+        public Task<IEnumerable<MinimalCrossDetail>> GetCrossesForRankStatus( Guid rankId, Guid requirementId, Guid userIdForStatuses )
         {
-            return await _dbContext.RankCrosses.Include( r => r.Cross ).Where( r => r.RankId == rankId && r.RankRequirementId == requirementId )
-                                                .Select( r => new MinimalCrossDetail()
-                                                {
-                                                    Id = r.CrossId,
-                                                    Name = r.Cross.Name,
-                                                    ImageUploaded = r.Cross.ImageUploaded,
-                                                    ImageExtension = r.Cross.ImageExtension
-                                                } ).ToArrayAsync();
+            return _repo.GetCrossesForRankStatusAsync( rankId, requirementId );
         }
 
-        public async Task<IEnumerable<MinimalGoalDetail>> GetAttachmentsForRankStatus( Guid requirementId, Guid userIdForStatuses )
+        public Task<IEnumerable<MinimalGoalDetail>> GetAttachmentsForRankStatus( Guid requirementId, Guid userIdForStatuses )
         {
-            return await _dbContext.ProofOfCompletionAttachments.Where( r => r.RequirementId == requirementId && r.UserId == userIdForStatuses )
-                                                .Select( r => new MinimalAttachmentDetail() { Id = r.Id } ).ToArrayAsync();
+            return _repo.GetAttachmentsForRankStatusAsync( requirementId, userIdForStatuses );
         }
 
-        public async Task<IEnumerable<MinimalRingDetail>> GetRingsForRankStatus( Guid rankId, Guid requirementId, Guid userIdForStatuses )
+        public Task<IEnumerable<MinimalRingDetail>> GetRingsForRankStatus( Guid rankId, Guid requirementId, Guid userIdForStatuses )
         {
-            return await _dbContext.RankStatusRings.Include( r => r.Ring )
-                                                .Where( r => r.RankId == rankId && r.RankRequirementId == requirementId && r.UserId == userIdForStatuses )
-                                                .Select( r => new MinimalRingDetail()
-                                                {
-                                                    Id = r.RingId,
-                                                    Name = r.Ring.Name,
-                                                    ImageUploaded = r.Ring.ImageUploaded,
-                                                    ImageExtension = r.Ring.ImageExtension
-                                                } ).ToArrayAsync();
+            return _repo.GetRingsForRankStatusAsync( rankId, requirementId, userIdForStatuses );
         }
     }
 }

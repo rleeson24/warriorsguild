@@ -222,17 +222,17 @@ namespace WarriorsGuild.Tests.Providers
             var ringApprovals = new List<RingApproval>();
             foreach ( var ring in reqRings )
             {
-                ringApprovals.Add(_fixture.Build<RingApproval>().Without( r => r.RecalledByWarriorTs ).Without( r => r.ReturnedTs ).Without( r => r.ReturnedReason ).With( r => r.RingId, ring.RingId ).Create() );
+                ringApprovals.Add( _fixture.Build<RingApproval>().Without( r => r.RecalledByWarriorTs ).Without( r => r.ReturnedTs ).Without( r => r.ReturnedReason ).With( r => r.RingId, ring.RingId ).With( r => r.ApprovedAt, DateTime.UtcNow ).Create() );
             }
             var crossApprovals = new List<CrossApproval>();
             foreach ( var cross in reqCrosses )
             {
-                crossApprovals.Add(_fixture.Build<CrossApproval>().Without( r => r.ReturnedTs ).Without( r => r.RecalledByWarriorTs ).With( c => c.CrossId, cross.CrossId ).Create() );
+                crossApprovals.Add( _fixture.Build<CrossApproval>().Without( r => r.ReturnedTs ).Without( r => r.RecalledByWarriorTs ).With( c => c.CrossId, cross.CrossId ).With( c => c.ApprovedAt, DateTime.UtcNow ).Create() );
             }
             var dbApprovedRings = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) );
             var dbApprovedCrosses = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<CrossApproval>( crossApprovals ) );
             if ( ringsRequired ) mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( dbApprovedRings.Object );
-            //if ( crossesRequired ) mockGuildDbContext.Setup( m => m.CrossStatuses ).Returns( dbApprovedCrosses.Object );
+            if ( crossesRequired ) mockGuildDbContext.Setup( m => m.CrossApprovals ).Returns( dbApprovedCrosses.Object );
 
             // Act
             var result = await ranksProviderHelpers.AllAssociatedRingsAndCrossesAreCompletedAndApprovedAsync(
@@ -307,7 +307,7 @@ namespace WarriorsGuild.Tests.Providers
             if ( ringsRequired && ringWillFailFirst ) mockGuildDbContext.Setup( m => m.RankStatusRings ).Returns( dbRings.Object );
             if ( crossesRequired && crossWillFailFirst ) mockGuildDbContext.Setup( m => m.RankStatusCrosses ).Returns( dbCrosses.Object );
             if ( ringsRequired && ringWillFailFirst ) mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( dbApprovedRings.Object );
-            //if ( crossesRequired && crossWillFailFirst ) mockGuildDbContext.Setup( m => m.CrossStatuses ).Returns( dbApprovedCrosses.Object );
+            if ( crossesRequired && crossWillFailFirst ) mockGuildDbContext.Setup( m => m.CrossApprovals ).Returns( dbApprovedCrosses.Object );
 
             // Act
             var result = await ranksProviderHelpers.AllAssociatedRingsAndCrossesAreCompletedAndApprovedAsync(

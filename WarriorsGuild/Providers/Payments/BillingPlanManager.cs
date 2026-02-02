@@ -1,20 +1,19 @@
-﻿using WarriorsGuild.Areas.Payments.Mappers;
+using WarriorsGuild.Areas.Payments.Mappers;
 using WarriorsGuild.Data.Models.Payments;
-using WarriorsGuild.DataAccess;
 using WarriorsGuild.Models.Payments;
 
 namespace WarriorsGuild.Providers.Payments
 {
     public class BillingPlanManager : IBillingPlanManager
     {
-        private IGuildDbContext db;
+        private readonly IAddOnPriceOptionRepository _addOnPriceOptionRepository;
         private IStripePlanProvider StripeProvider { get; }
         private IPriceOptionMapper PriceOptionMapper { get; }
         private IBillingPlanRequestMapper BillingPlanRequestMapper { get; }
 
-        public BillingPlanManager( IGuildDbContext db, IStripePlanProvider stripePlanProvider, IPriceOptionMapper priceOptionMapper, IBillingPlanRequestMapper billingPlanRequestMapper )
+        public BillingPlanManager( IAddOnPriceOptionRepository addOnPriceOptionRepository, IStripePlanProvider stripePlanProvider, IPriceOptionMapper priceOptionMapper, IBillingPlanRequestMapper billingPlanRequestMapper )
         {
-            this.db = db;
+            _addOnPriceOptionRepository = addOnPriceOptionRepository;
             StripeProvider = stripePlanProvider;
             PriceOptionMapper = priceOptionMapper;
             BillingPlanRequestMapper = billingPlanRequestMapper;
@@ -43,8 +42,8 @@ namespace WarriorsGuild.Providers.Payments
                 var addlGuardianPlanId = String.Empty;
                 var addlWarriorProductId = String.Empty;
                 var addlWarriorPlanId = String.Empty;
-                var existingGuardianPlan = GetExistingPlan( request.AdditionalGuardianCharge, request.Frequency, request.Currency, 1, 0 );
-                var existingWarriorPlan = GetExistingPlan( request.AdditionalWarriorCharge, request.Frequency, request.Currency, 0, 1 );
+                var existingGuardianPlan = _addOnPriceOptionRepository.FindExistingPlan( request.AdditionalGuardianCharge, request.Frequency, request.Currency, 1, 0 );
+                var existingWarriorPlan = _addOnPriceOptionRepository.FindExistingPlan( request.AdditionalWarriorCharge, request.Frequency, request.Currency, 0, 1 );
                 if ( existingGuardianPlan != null )
                 {
                     addlGuardianProductId = existingGuardianPlan.StripeProductId;
@@ -84,17 +83,6 @@ namespace WarriorsGuild.Providers.Payments
             {
                 return new CreateStripeBillingPlanResponse();
             }
-        }
-
-        private AddOnPriceOption? GetExistingPlan( decimal additionalGuardianCharge, Frequency frequency, string? currency, Int32 numOfGuardians, Int32 numOfWarriors )
-        {
-            return db.AddOnPriceOptions.FirstOrDefault( o => o.NumberOfGuardians == numOfGuardians
-                                                            && o.NumberOfWarriors == numOfWarriors
-                                                            && o.Charge == additionalGuardianCharge
-                                                            && o.Frequency == frequency
-                                                            && o.Currency == currency
-                                                            && o.Show
-                                                            && !String.IsNullOrEmpty( o.StripePlanId ) );
         }
     }
 }

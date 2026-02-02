@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -27,14 +27,15 @@ namespace WarriorsGuild.Ranks
         private IRanksProviderHelpers RpHelpers { get; }
 
         private IRankMapper _rankMapper { get; }
-        private IHelpers Helpers { get; }
+        private IDateTimeProvider _dateTimeProvider { get; }
         private ILogger<RanksProvider> Logger { get; }
         private IUserProvider _userProvider { get; }
 
-        private IGuildDbContext _dbContext { get; }
+        private IUnitOfWork _uow { get; }
         private IRankRepository _repo { get; }
+        private IAccountRepository _accountRepo { get; }
 
-        public RankApprovalsProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IHelpers helpers, IRanksProviderHelpers rpHelpers,
+        public RankApprovalsProvider( IUnitOfWork uow, IRankRepository repo, IAccountRepository accountRepo, IRankMapper rankMapper, IDateTimeProvider dateTimeProvider, IRanksProviderHelpers rpHelpers,
                             IUserProvider userProvider, IRankStatusProvider rankStatusProvider, ILogger<RanksProvider> logger, IEmailProvider emailProvider,
                             IHttpContextAccessor httpContextAccessor )
         {
@@ -43,22 +44,21 @@ namespace WarriorsGuild.Ranks
             _httpContextAccessor = httpContextAccessor;
             this.rankStatusProvider = rankStatusProvider;
             _rankMapper = rankMapper;
-            Helpers = helpers;
+            _dateTimeProvider = dateTimeProvider;
             Logger = logger;
             _userProvider = userProvider;
-            _dbContext = dbContext;
+            _uow = uow;
             _repo = repo;
+            _accountRepo = accountRepo;
         }
 
         public async Task<IEnumerable<PendingApprovalDetail>> GetPendingApprovalsAsync( Guid userId )
         {
             var response = new List<PendingApprovalDetail>();
-            var approvalRecords = await _dbContext.RankApprovals.Include( "Rank" ).Where( ra => ra.UserId == userId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue && !ra.ApprovedAt.HasValue ).ToArrayAsync();
+            var approvalRecords = await _repo.GetPendingRankApprovalsWithRankAsync( userId );
             foreach ( var ar in approvalRecords )
             {
-                var requirements = _dbContext.RankRequirements.Where( r => r.RankId == ar.RankId );
-                var statusEntries = _dbContext.RankStatuses.Where( rs => rs.RankId == ar.RankId && rs.UserId == userId && !rs.GuardianCompleted.HasValue && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue );
-                var pendingRequirements = await requirements.Where( rr => statusEntries.Any( se => se.RankRequirementId == rr.Id && !se.GuardianCompleted.HasValue ) ).ToArrayAsync();
+                var (pendingRequirements, statusEntries) = await _repo.GetPendingRequirementsWithStatusForApprovalAsync( ar.RankId, userId );
 
                 var unconfirmedRequirements = new List<RankRequirementViewModel>();
                 foreach ( var requirement in pendingRequirements )
@@ -99,7 +99,7 @@ namespace WarriorsGuild.Ranks
 
         public async Task<IEnumerable<PendingApprovalDetail>> AllApprovalsForRank( Guid rankId, Guid userIdForStatuses )
         {
-            var ar = await _dbContext.RankApprovals.Where( ra => ra.RankId == rankId && ra.UserId == userIdForStatuses ).OrderByDescending( r => r.CompletedAt ).ToArrayAsync();
+            var ar = await _repo.GetApprovalsForRankAsync( rankId, userIdForStatuses );
             IEnumerable<PendingApprovalDetail> response = null;
             response = ar.Select( a => new PendingApprovalDetail()
             {
@@ -118,7 +118,7 @@ namespace WarriorsGuild.Ranks
         public async Task<RecordCompletionResponse> SubmitForApprovalAsync( Guid rankId, Guid userIdForStatuses )
         {
             var response = new RecordCompletionResponse();
-            var approvalrecord = await _dbContext.RankApprovals.Where( ra => ra.UserId == userIdForStatuses && ra.RankId == rankId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue ).OrderByDescending( r => r.CompletedAt ).FirstOrDefaultAsync();
+            var approvalrecord = await _repo.GetLatestPendingOrApprovedRankApprovalAsync( rankId, userIdForStatuses );
             var percentApproved = approvalrecord?.PercentComplete ?? 0;
             if ( approvalrecord == null || approvalrecord.ApprovedAt.HasValue )
             {
@@ -129,10 +129,10 @@ namespace WarriorsGuild.Ranks
                 else if ( percentApproved >= 33 ) lastApprovedMilestone = 33;
                 if ( totalCompleted == 100 || totalCompleted - lastApprovedMilestone >= 33 )
                 {
-                    var approvalEntry = _rankMapper.CreateRankApproval( rankId: rankId, userIdForStatuses, totalCompleted, Helpers.GetCurrentDateTime() );
-                    _dbContext.RankApprovals.Add( approvalEntry );
-                    await _dbContext.SaveChangesAsync();
-                    var rank = _dbContext.Set<Rank>().Find( rankId );
+                    var approvalEntry = _rankMapper.CreateRankApproval( rankId: rankId, userIdForStatuses, totalCompleted, _dateTimeProvider.GetCurrentDateTime() );
+                    _repo.AddApprovalEntry( approvalEntry );
+                    await _uow.SaveChangesAsync();
+                    var rank = _repo.Get( rankId );
                     await NotifyGuardiansOfRequestForPromotion( rank, totalCompleted, userIdForStatuses );
                     response.Success = true;
                     response.ApprovalRecordId = approvalEntry.Id;
@@ -148,25 +148,24 @@ namespace WarriorsGuild.Ranks
 
         public async Task ReturnAsync( Guid approvalRecordId, Guid userId, string userReason )
         {
-            var status = await _dbContext.RankApprovals.Include( s => s.Rank ).Where( c => c.Id == approvalRecordId && !c.RecalledByWarriorTs.HasValue && !c.ReturnedTs.HasValue && !c.ApprovedAt.HasValue ).FirstOrDefaultAsync();
+            var status = await _repo.GetRankApprovalByIdWithRankAsync( approvalRecordId );
             if ( status != null )
             {
                 status.ReturnedTs = DateTime.UtcNow;
                 status.ReturnedReason = userReason;
                 status.ReturnedBy = userId;
-                await _dbContext.SaveChangesAsync();
-                //var rank = Database.Set<RankApproval>().Find( approvalRecordId ).Rank;
+                await _uow.SaveChangesAsync();
                 await NotifyWarriorOfReturnedRequest( status, userId );
             }
         }
 
         public async Task RecallAsync( Guid approvalRecordId, Guid userId )
         {
-            var status = await _dbContext.RankApprovals.Where( c => c.Id == approvalRecordId && !c.RecalledByWarriorTs.HasValue && !c.ReturnedTs.HasValue && !c.ApprovedAt.HasValue ).FirstOrDefaultAsync();
-            if ( status != null )
+            var status = await _repo.GetRankApprovalByIdAsync( approvalRecordId );
+            if ( status != null && !status.RecalledByWarriorTs.HasValue && !status.ReturnedTs.HasValue && !status.ApprovedAt.HasValue )
             {
                 status.RecalledByWarriorTs = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync();
+                await _uow.SaveChangesAsync();
             }
         }
 
@@ -174,7 +173,7 @@ namespace WarriorsGuild.Ranks
         {
             var response = new RecordCompletionResponse();
 
-            var approvalRecord = await _dbContext.RankApprovals.FirstOrDefaultAsync( ra => ra.Id == approvalRecordId );
+            var approvalRecord = await _repo.GetRankApprovalByIdAsync( approvalRecordId );
             if ( approvalRecord != null )
             {
                 if ( !await _userProvider.UserIsRelatedToWarrior( currentUserId, approvalRecord.UserId ) )
@@ -184,17 +183,17 @@ namespace WarriorsGuild.Ranks
                 }
                 else if ( !approvalRecord.ApprovedAt.HasValue )
                 {
-                    var ss = await _dbContext.RankStatuses.Where( rs => rs.RankId == approvalRecord.RankId && rs.UserId == approvalRecord.UserId && !rs.GuardianCompleted.HasValue && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue ).ToArrayAsync();
+                    var ss = await _repo.GetUnapprovedRankStatusesAsync( approvalRecord.RankId, approvalRecord.UserId );
                     var relatedRingsAndCrossesAreApproved = await RpHelpers.AllAssociatedRingsAndCrossesAreCompletedAndApprovedAsync( approvalRecord.RankId, ss.Select( s => s.RankRequirementId ), approvalRecord.UserId );
                     if ( relatedRingsAndCrossesAreApproved )
                     {
-                        var currentTime = Helpers.GetCurrentDateTime();
+                        var currentTime = _dateTimeProvider.GetCurrentDateTime();
                         foreach ( var s in ss )
                         {
                             s.GuardianCompleted = currentTime;
                         }
                         approvalRecord.ApprovedAt = currentTime;
-                        await _dbContext.SaveChangesAsync();
+                        await _uow.SaveChangesAsync();
                         response.Success = true;
                     }
                     else
@@ -221,7 +220,7 @@ namespace WarriorsGuild.Ranks
         {
             existingChild.GuardianCompleted = DateTime.UtcNow;
             _repo.Update( existingChild );
-            await _dbContext.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
         }
 
 
@@ -230,13 +229,16 @@ namespace WarriorsGuild.Ranks
         {
             try
             {
-                var guardians = _dbContext.Set<ApplicationUser>().Where( u => u.ChildUsers.Any( cu => cu.Id == userIdForStatuses.ToString() ) ).Select( g => g.Email ).ToArray();
-                var user = _dbContext.Set<ApplicationUser>().Find( userIdForStatuses.ToString() );
+                var guardians = await _accountRepo.GetGuardianEmailsForWarriorAsync( userIdForStatuses );
+                var user = await _accountRepo.GetUserByIdAsync( userIdForStatuses );
+                if ( guardians.Length == 0 || user == null )
+                    return;
                 var requesting = totalCompleted == 100 ? "Round Table" : "Promotion";
                 var httpReq = _httpContextAccessor.HttpContext.Request;
-                var htmlBody = $@"<h1>{user.FirstName} {user.LastName.Substring( 0, 1 )}. is requesting a {requesting}</h1><br /><br /><p>He has completed <span style='font-weight: bold'>{totalCompleted}%</span> of <span style='font-weight: bold'>{rank.Name}</span> and is requesting a <span style='font-weight: bold'>{requesting}</span></p>
+                var displayName = $"{user.FirstName} {user.LastName?.Substring( 0, 1 ) ?? ""}.";
+                var htmlBody = $@"<h1>{displayName} is requesting a {requesting}</h1><br /><br /><p>He has completed <span style='font-weight: bold'>{totalCompleted}%</span> of <span style='font-weight: bold'>{rank.Name}</span> and is requesting a <span style='font-weight: bold'>{requesting}</span></p>
                                 <a style='color:#af111c' href='{string.Format( "{0}://{1}", httpReq.Scheme, httpReq.Host )}'>Click Here</a> to review.";
-                await emailProvider.SendAsync( $"{user.FirstName} {user.LastName.Substring( 0, 1 )} requesting {requesting}", htmlBody, guardians, EmailView.Generic );
+                await emailProvider.SendAsync( $"{displayName} requesting {requesting}", htmlBody, guardians, EmailView.Generic );
             }
             catch ( Exception ex )
             {
@@ -248,10 +250,13 @@ namespace WarriorsGuild.Ranks
         {
             try
             {
-                var warriors = await _dbContext.Set<ApplicationUser>().Where( u => u.Id == status.UserId.ToString() ).Select( g => g.Email ).ToArrayAsync();
-                var user = _dbContext.Set<ApplicationUser>().Find( guardianUserId.ToString() );
-                var htmlBody = $"<p><span style='font-weight: bold'>{user.FirstName} {user.LastName.Substring( 0, 1 )}.</span> has returned your <span style='font-weight: bold'>{status.Rank.Name}</span> request for promotion</p><p>{status.ReturnedReason}</p>";
-                await emailProvider.SendAsync( $"{user.FirstName} {user.LastName.Substring( 0, 1 )} returned request for promotion", htmlBody, warriors, EmailView.Generic );
+                var warriorUser = await _accountRepo.GetUserByIdAsync( status.UserId );
+                var warriors = warriorUser != null ? new[] { warriorUser.Email } : Array.Empty<string>();
+                var user = await _accountRepo.GetUserByIdAsync( guardianUserId );
+                var htmlBody = user != null
+                    ? $"<p><span style='font-weight: bold'>{user.FirstName} {user.LastName.Substring( 0, 1 )}.</span> has returned your <span style='font-weight: bold'>{status.Rank.Name}</span> request for promotion</p><p>{status.ReturnedReason}</p>"
+                    : $"<p>Your <span style='font-weight: bold'>{status.Rank.Name}</span> request for promotion has been returned</p><p>{status.ReturnedReason}</p>";
+                await emailProvider.SendAsync( user != null ? $"{user.FirstName} {user.LastName.Substring( 0, 1 )} returned request for promotion" : "Request for promotion returned", htmlBody, warriors, EmailView.Generic );
             }
             catch ( Exception ex )
             {

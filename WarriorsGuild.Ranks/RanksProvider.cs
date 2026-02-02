@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,14 +35,14 @@ namespace WarriorsGuild.Ranks
 
     public class RanksProvider : IRanksProvider
     {
-        private IGuildDbContext _dbContext { get; }
+        private IUnitOfWork _uow { get; }
         private IRankRepository _repo { get; }
         private IRankMapper _rankMapper { get; }
         private IBlobProvider FileProvider { get; }
 
-        public RanksProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IBlobProvider fileProvider )
+        public RanksProvider( IUnitOfWork uow, IRankRepository repo, IRankMapper rankMapper, IBlobProvider fileProvider )
         {
-            _dbContext = dbContext;
+            _uow = uow;
             _repo = repo;
             _rankMapper = rankMapper;
             FileProvider = fileProvider;
@@ -120,7 +120,7 @@ namespace WarriorsGuild.Ranks
                 existingParent.Description = rank.Description;
 
                 _repo.Update( id, existingParent );
-                await _dbContext.SaveChangesAsync();
+                await _uow.SaveChangesAsync();
             }
         }
 
@@ -129,7 +129,7 @@ namespace WarriorsGuild.Ranks
             var maxIndexInDb = await _repo.GetMaxRankIndexAsync();
             var rank = _rankMapper.CreateRank( input.Description, input.Name, maxIndexInDb + 1 );
             _repo.Add( rank );
-            await _dbContext.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
             return rank;
         }
 
@@ -142,8 +142,8 @@ namespace WarriorsGuild.Ranks
         public async Task<IEnumerable<Rank>> UpdateOrderAsync( IEnumerable<GoalIndexEntry> request )
         {
             _repo.UpdateOrder( request );
-            await _dbContext.SaveChangesAsync();
-            return _dbContext.Ranks;
+            await _uow.SaveChangesAsync();
+            return await _repo.List().ToArrayAsync();
         }
 
 
@@ -161,7 +161,7 @@ namespace WarriorsGuild.Ranks
             if ( rank != null )
             {
                 _repo.SetHasImage( rank, fileExtension );
-                await _dbContext.SaveChangesAsync();
+                await _uow.SaveChangesAsync();
             }
         }
 
@@ -173,14 +173,14 @@ namespace WarriorsGuild.Ranks
             if ( rank != null )
             {
                 _repo.SetHasGuide( rank, fileExtension );
-                await _dbContext.SaveChangesAsync();
+                await _uow.SaveChangesAsync();
             }
         }
 
         public async Task<FileDetail> GetGuideAsync( Guid rankId )
         {
             var fileResult = await FileProvider.DownloadFile( WarriorsGuildFileType.Guide, rankId.ToString() );
-            var rank = await _dbContext.Ranks.SingleOrDefaultAsync( r => r.Id == rankId && r.GuideUploaded.HasValue );
+            var rank = await _repo.GetRankWithGuideAsync( rankId );
             return new FileDetail( fileResult.FilePathToServe, rank?.Name + rank?.GuideFileExtension, fileResult.ContentType );
         }
         #endregion

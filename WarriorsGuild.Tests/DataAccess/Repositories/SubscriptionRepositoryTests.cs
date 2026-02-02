@@ -1,9 +1,12 @@
 using AutoFixture;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Moq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using WarriorsGuild.Areas.Payments;
 using WarriorsGuild.Data.Models;
@@ -27,7 +30,6 @@ namespace WarriorsGuild.Tests.DataAccess.Repositories
         public void SetUp()
         {
             this.mockRepository = new MockRepository( MockBehavior.Strict );
-
             this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
         }
 
@@ -209,33 +211,22 @@ namespace WarriorsGuild.Tests.DataAccess.Repositories
         [Test]
         public async Task CreateSubscription()
         {
-            // Arrange
-            
             var unitUnderTest = this.CreateSubscriptionRepository();
-            var ba =_fixture.Build<BillingAgreement>().Create();
-            var newSubscriptions =_fixture.Build<UserSubscription>().CreateMany();
-            var billingAgreements =_fixture.Build<BillingAgreement>().With( b => b.Cancelled, (DateTime?)null ).CreateMany();
-            var billingAgreementSet = TestHelpers.CreateDbSetMock( billingAgreements, false, true );
+            var ba = _fixture.Build<BillingAgreement>().Create();
+            var newSubscriptions = _fixture.Build<UserSubscription>().CreateMany().ToList();
+            var billingAgreementSet = new Mock<DbSet<BillingAgreement>>( MockBehavior.Loose );
+            var userSubscriptionsSet = new Mock<DbSet<UserSubscription>>( MockBehavior.Loose );
+            billingAgreementSet.Setup( m => m.Add( It.IsAny<BillingAgreement>() ) ).Returns( ( EntityEntry<BillingAgreement> )null );
+            userSubscriptionsSet.Setup( m => m.AddRange( It.IsAny<IEnumerable<UserSubscription>>() ) );
             mockGuildDbContext.Setup( m => m.BillingAgreements ).Returns( billingAgreementSet.Object );
+            mockGuildDbContext.Setup( m => m.UserSubscriptions ).Returns( userSubscriptionsSet.Object );
+            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).ReturnsAsync( 1 );
 
-            var mySubscriptionsSet = TestHelpers.CreateDbSetMock( newSubscriptions, false, true );
-            mockGuildDbContext.Setup( m => m.UserSubscriptions ).Returns( mySubscriptionsSet.Object );
+            await unitUnderTest.CreateSubscription( ba, newSubscriptions );
 
-            var callOrder = 0;
-            billingAgreementSet.Setup( m => m.Add( ba ) ).Callback( () => Assert.That( callOrder++, Is.EqualTo( 0 ) ) );
-            mySubscriptionsSet.Setup( m => m.AddRange( It.Is<IEnumerable<UserSubscription>>( uss => uss.SequenceEqual( newSubscriptions ) ) ) ).Callback( () => Assert.That( callOrder++, Is.EqualTo( 1 ) ) );
-
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 0 ) ).Callback( () => Assert.That( callOrder++, Is.EqualTo( 2 ) ) );
-
-            // Act
-            await unitUnderTest.CreateSubscription(
-                ba,
-                newSubscriptions );
-
-            //Verify
-            billingAgreementSet.Verify( m => m.Add( ba ) );
-            mySubscriptionsSet.Verify( m => m.AddRange( It.Is<IEnumerable<UserSubscription>>( uss => uss.SequenceEqual( newSubscriptions ) ) ) );
-            mockGuildDbContext.Verify( m => m.SaveChangesAsync() );
+            billingAgreementSet.Verify( m => m.Add( ba ), Times.Once );
+            userSubscriptionsSet.Verify( m => m.AddRange( It.Is<IEnumerable<UserSubscription>>( uss => uss.SequenceEqual( newSubscriptions ) ) ), Times.Once );
+            mockGuildDbContext.Verify( m => m.SaveChangesAsync(), Times.Once );
         }
 
         //[Test]

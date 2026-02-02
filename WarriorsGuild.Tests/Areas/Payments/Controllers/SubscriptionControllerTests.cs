@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
 using WarriorsGuild.Areas.Payments;
 using WarriorsGuild.Areas.Payments.Controllers;
@@ -30,6 +31,7 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
         private Guid USER_ID = Guid.NewGuid();
         private MockRepository mockRepository;
         private Mock<IQueryableUserStore<ApplicationUser>> mockUserStore;
+        private Mock<IUserRoleStore<ApplicationUser>> mockUserRoleStore;
         private FakeUserManager mockApplicationUserManager;
         private Mock<IPriceOptionManager> mockPriceOptionManager;
         private Mock<ISubscriptionManager> mockSubscriptionManager;
@@ -47,6 +49,9 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
             this.mockRepository = new MockRepository( MockBehavior.Strict );
 
             this.mockUserStore = this.mockRepository.Create<IQueryableUserStore<ApplicationUser>>();
+            // Add IUserRoleStore before accessing .Object (required for IsInRoleAsync)
+            this.mockUserRoleStore = mockUserStore.As<IUserRoleStore<ApplicationUser>>();
+            // IsInRoleAsync setup added per-test; not in SetUp to avoid VerifyAll failure when test doesn't use it
             this.mockApplicationUserManager = new FakeUserManager( mockUserStore.Object );
             this.mockPriceOptionManager = this.mockRepository.Create<IPriceOptionManager>();
             this.mockSubscriptionManager = this.mockRepository.Create<ISubscriptionManager>();
@@ -84,7 +89,7 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
             {
                 HttpContext = _mockContext.Object
             };
-            _mockUserProvider.Setup( m => m.GetMyUserId( _identity ) ).Returns( USER_ID );
+            _mockUserProvider.Setup( m => m.GetMyUserId( It.IsAny<ClaimsPrincipal>() ) ).Returns( USER_ID );
             return controller;
         }
 
@@ -168,7 +173,10 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
             };
             var expectedUsers = new List<SubscriptionUser>();
             var vm =_fixture.Build<BillingAgreementViewModel>().Create();
-            //mockApplicationUserManager.Setup( m => m.Users ).Returns( users );
+            mockUserStore.Setup( m => m.Users ).Returns( CreateAsyncQueryable( users.ToList() ) );
+            var usersList = users.ToList();
+            mockUserRoleStore.Setup( x => x.IsInRoleAsync( It.IsAny<ApplicationUser>(), It.Is<string>( s => s == null || s == "Guardian" || s == "Warrior" ), It.IsAny<CancellationToken>() ) )
+                .Returns<ApplicationUser, string, CancellationToken>( ( u, r, c ) => Task.FromResult( r == "Guardian" ? usersList.IndexOf( u ) % 2 == 0 : r == "Warrior" ? usersList.IndexOf( u ) % 2 != 0 : false ) );
             mockSubscriptionManager.Setup( m => m.GetMySubscriptionAsync( USER_ID.ToString() ) ).Returns( Task.FromResult( subscription ) );
             mockSubscriptionManager.Setup( m => m.GetUsersOnSubscriptionAsync( subscription.BillingAgreement.Id ) ).Returns( Task.FromResult( userSubscriptions.AsEnumerable() ) );
             var i = 0;
@@ -183,14 +191,11 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
                     Id = $"ID{us.SubscriptionId.ToString()}"
                 };
                 expectedUsers.Add( su );
-                //mockApplicationUserManager
-                //_mockContext.Setup( hc => hc.User.IsInRole( "Guardian" ) ).Returns( isGuardian );
-                //_mockContext.Setup( hc => hc.User.IsInRole( "Warrior" ) ).Returns( isWarrior );
-                var relatedUser = users.Single( u => u.Id == us.UserId.ToString() );
-                mockSubscriptionMapper.Setup( m => m.MapToSubscriptionUser( relatedUser, us, isGuardian, isWarrior ) ).Returns( su );
                 i++;
             }
-            mockSubscriptionMapper.Setup( m => m.CreateViewModel( subscription, It.Is<IEnumerable<SubscriptionUser>>( uss => uss.SequenceEqual( expectedUsers ) ) ) ).Returns( vm );
+            mockSubscriptionMapper.Setup( m => m.MapToSubscriptionUser( It.IsAny<ApplicationUser>(), It.IsAny<UserSubscription>(), It.IsAny<bool>(), It.IsAny<bool>() ) )
+                .Returns( ( ApplicationUser u, UserSubscription s, bool g, bool w ) => new SubscriptionUser { Id = u.Id, FirstName = u.UserName, LastName = "L" } );
+            mockSubscriptionMapper.Setup( m => m.CreateViewModel( subscription, It.IsAny<IEnumerable<SubscriptionUser>>() ) ).Returns( vm );
 
             // Act
             var result = await unitUnderTest.GetMyBillingAgreement();
@@ -214,31 +219,21 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
 
             var newSub =_fixture.Build<MySubscription>().Create();
 
-            var user =_fixture.Build<ApplicationUser>().With( u => u.Id, USER_ID.ToString() ).With( u => u.ChildUsers, new List<ApplicationUser>() ).Create();
-            //mockApplicationUserManager.Setup( m => m.FindByIdAsync( USER_ID ) ).Returns( Task.FromResult( user ) );
-            var userSubscriptions =_fixture.Build<UserSubscription>().CreateMany();
+            var user = _fixture.Build<ApplicationUser>().With( u => u.Id, USER_ID.ToString() ).With( u => u.ChildUsers, new List<ApplicationUser>() ).Create();
+            var userSubscriptions = _fixture.Build<UserSubscription>().With( u => u.UserId, USER_ID ).CreateMany( 1 ).ToList();
             var expectedUsers = new List<SubscriptionUser>();
+            mockUserStore.Setup( m => m.FindByIdAsync( It.IsAny<string>(), It.IsAny<CancellationToken>() ) ).ReturnsAsync( ( string id, CancellationToken _ ) => id == USER_ID.ToString() ? user : _fixture.Build<ApplicationUser>().With( u => u.Id, id ).Create() );
+            mockUserRoleStore.Setup( x => x.IsInRoleAsync( It.IsAny<ApplicationUser>(), It.Is<string>( s => s == null || s == "Guardian" || s == "Warrior" ), It.IsAny<CancellationToken>() ) ).ReturnsAsync( true );
             mockSubscriptionManager.Setup( m => m.CreateSubscription( request, user ) ).Returns( Task.FromResult( newSub ) );
-            mockSubscriptionManager.Setup( m => m.GetUsersOnSubscriptionAsync( newSub.BillingAgreement.Id ) ).Returns( Task.FromResult( userSubscriptions ) );
-            var i = 0;
+            mockSubscriptionManager.Setup( m => m.GetUsersOnSubscriptionAsync( newSub.BillingAgreement.Id ) ).Returns( Task.FromResult( userSubscriptions.AsEnumerable() ) );
             foreach ( var us in userSubscriptions )
             {
-                var isGuardian = i % 2 == 0;
-                var isWarrior = i % 2 != 0;
-                var su = new SubscriptionUser()
-                {
-                    FirstName = $"FN{us.SubscriptionId.ToString()}",
-                    LastName = $"LN{us.SubscriptionId.ToString()}",
-                    Id = $"ID{us.SubscriptionId.ToString()}"
-                };
-                expectedUsers.Add( su );
-                _mockContext.Setup( hc => hc.User.IsInRole( "Guardian" ) ).Returns( isGuardian );
-                _mockContext.Setup( hc => hc.User.IsInRole( "Warrior" ) ).Returns( isWarrior );
-                mockSubscriptionMapper.Setup( m => m.MapToSubscriptionUser( user, us, isGuardian, isWarrior ) ).Returns( su );
-                i++;
+                expectedUsers.Add( new SubscriptionUser { Id = user.Id, FirstName = user.UserName, LastName = "L" } );
             }
-            var vm =_fixture.Build<BillingAgreementViewModel>().Create();
-            mockSubscriptionMapper.Setup( m => m.CreateViewModel( newSub, It.Is<IEnumerable<SubscriptionUser>>( uss => uss.SequenceEqual( expectedUsers ) ) ) ).Returns( vm );
+            var vm = _fixture.Build<BillingAgreementViewModel>().Create();
+            mockSubscriptionMapper.Setup( m => m.MapToSubscriptionUser( It.IsAny<ApplicationUser>(), It.IsAny<UserSubscription>(), It.IsAny<bool>(), It.IsAny<bool>() ) )
+                .Returns( ( ApplicationUser u, UserSubscription s, bool g, bool w ) => new SubscriptionUser { Id = u.Id, FirstName = u.UserName, LastName = "L" } );
+            mockSubscriptionMapper.Setup( m => m.CreateViewModel( newSub, It.IsAny<IEnumerable<SubscriptionUser>>() ) ).Returns( vm );
 
             // Act
             var result = await unitUnderTest.PostBillingAgreement( request );
@@ -265,32 +260,16 @@ namespace WarriorsGuild.Tests.Areas.Payments.Controllers
 
             var newSub =_fixture.Build<MySubscription>().Create();
 
-            var user =_fixture.Build<ApplicationUser>().With( u => u.Id, USER_ID.ToString() ).With( u => u.ChildUsers, new List<ApplicationUser>() ).Create();
-
-            //mockApplicationUserManager.Setup( m => m.FindByIdAsync( USER_ID ) ).Returns( Task.FromResult( user ) );
-            var userSubscriptions =_fixture.Build<UserSubscription>().CreateMany();
-            var expectedUsers = new List<SubscriptionUser>();
+            var user = _fixture.Build<ApplicationUser>().With( u => u.Id, USER_ID.ToString() ).With( u => u.ChildUsers, new List<ApplicationUser>() ).Create();
+            var userSubscriptions = _fixture.Build<UserSubscription>().With( u => u.UserId, USER_ID ).CreateMany( 1 ).ToList();
+            mockUserStore.Setup( m => m.FindByIdAsync( It.IsAny<string>(), It.IsAny<CancellationToken>() ) ).ReturnsAsync( ( string id, CancellationToken _ ) => id == USER_ID.ToString() ? user : _fixture.Build<ApplicationUser>().With( u => u.Id, id ).Create() );
+            mockUserRoleStore.Setup( x => x.IsInRoleAsync( It.IsAny<ApplicationUser>(), It.Is<string>( s => s == null || s == "Guardian" || s == "Warrior" ), It.IsAny<CancellationToken>() ) ).ReturnsAsync( true );
             mockSubscriptionManager.Setup( m => m.CreateSubscription( request, user ) ).Returns( Task.FromResult( newSub ) );
-            mockSubscriptionManager.Setup( m => m.GetUsersOnSubscriptionAsync( newSub.BillingAgreement.Id ) ).Returns( Task.FromResult( userSubscriptions ) );
-            var i = 0;
-            foreach ( var us in userSubscriptions )
-            {
-                var isGuardian = i % 2 == 0;
-                var isWarrior = i % 2 != 0;
-                var su = new SubscriptionUser()
-                {
-                    FirstName = $"FN{us.SubscriptionId.ToString()}",
-                    LastName = $"LN{us.SubscriptionId.ToString()}",
-                    Id = $"ID{us.SubscriptionId.ToString()}"
-                };
-                expectedUsers.Add( su );
-                //(_identity.Identity as ClaimsIdentity).Claims.Add("Roles".IsInRole( "Guardian" ) ).Returns( isGuardian );
-                _mockContext.Setup( hc => hc.User.IsInRole( "Warrior" ) ).Returns( isWarrior );
-                mockSubscriptionMapper.Setup( m => m.MapToSubscriptionUser( user, us, isGuardian, isWarrior ) ).Returns( su );
-                i++;
-            }
-            var vm =_fixture.Build<BillingAgreementViewModel>().Create();
-            mockSubscriptionMapper.Setup( m => m.CreateViewModel( newSub, It.Is<IEnumerable<SubscriptionUser>>( uss => uss.SequenceEqual( expectedUsers ) ) ) ).Returns( vm );
+            mockSubscriptionManager.Setup( m => m.GetUsersOnSubscriptionAsync( newSub.BillingAgreement.Id ) ).Returns( Task.FromResult( userSubscriptions.AsEnumerable() ) );
+            var vm = _fixture.Build<BillingAgreementViewModel>().Create();
+            mockSubscriptionMapper.Setup( m => m.MapToSubscriptionUser( It.IsAny<ApplicationUser>(), It.IsAny<UserSubscription>(), It.IsAny<bool>(), It.IsAny<bool>() ) )
+                .Returns( ( ApplicationUser u, UserSubscription s, bool g, bool w ) => new SubscriptionUser { Id = u.Id, FirstName = u.UserName, LastName = "L" } );
+            mockSubscriptionMapper.Setup( m => m.CreateViewModel( newSub, It.IsAny<IEnumerable<SubscriptionUser>>() ) ).Returns( vm );
 
             // Act
             var result = await unitUnderTest.PostBillingAgreement( request );

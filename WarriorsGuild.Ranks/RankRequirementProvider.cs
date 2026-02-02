@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -22,13 +22,12 @@ namespace WarriorsGuild.Ranks
     {
         private readonly IRankStatusProvider rankStatusProvider;
         private IRankMapper _rankMapper { get; }
-
-        private IGuildDbContext _dbContext { get; }
+        private IUnitOfWork _uow { get; }
         private IRankRepository _repo { get; }
 
-        public RankRequirementProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IRankStatusProvider rankStatusProvider )
+        public RankRequirementProvider( IUnitOfWork uow, IRankRepository repo, IRankMapper rankMapper, IRankStatusProvider rankStatusProvider )
         {
-            _dbContext = dbContext;
+            _uow = uow;
             _repo = repo;
             this.rankStatusProvider = rankStatusProvider;
             _rankMapper = rankMapper;
@@ -79,7 +78,7 @@ namespace WarriorsGuild.Ranks
         {
             var existingRequirements = await _repo.GetRequirements( rankId ).ToArrayAsync();
             await _repo.UpdateRequirementsAsync( rankId, requirements, existingRequirements );
-            await _dbContext.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
         }
     }
 }

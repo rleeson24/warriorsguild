@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -72,17 +72,17 @@ namespace WarriorsGuild.Rings
         private IGuildDbContext _dbContext { get; }
         private IRingRepository Repo { get; }
         public IRingMapper _ringMapper { get; }
-        public IHelpers Helpers { get; }
+        public IDateTimeProvider _dateTimeProvider { get; }
         public IUserProvider UserProvider { get; }
         public IBlobProvider FileProvider { get; }
         private ILogger<RingsProvider> Logger { get; }
 
-        public RingsProvider( IGuildDbContext dbContext,IRingRepository db, IRingMapper ringMapper, IHelpers helpers, IUserProvider userProvider, IBlobProvider fileProvider, IEmailProvider emailProvider, IHttpContextAccessor httpContextAccessor, ILogger<RingsProvider> logger )
+        public RingsProvider( IGuildDbContext dbContext,IRingRepository db, IRingMapper ringMapper, IDateTimeProvider dateTimeProvider, IUserProvider userProvider, IBlobProvider fileProvider, IEmailProvider emailProvider, IHttpContextAccessor httpContextAccessor, ILogger<RingsProvider> logger )
         {
             _dbContext = dbContext;
             Repo = db;
             _ringMapper = ringMapper;
-            Helpers = helpers;
+            _dateTimeProvider = dateTimeProvider;
             UserProvider = userProvider;
             FileProvider = fileProvider;
             this.emailProvider = emailProvider;
@@ -120,7 +120,7 @@ namespace WarriorsGuild.Rings
 
         public async Task<RingRequirement> GetRequirementAsync( Guid ringId, Guid requirementId )
         {
-            return await _dbContext.RingRequirements.SingleOrDefaultAsync( rr => rr.RingId == ringId && rr.Id == requirementId );
+            return await Repo.GetRequirementAsync( ringId, requirementId );
         }
 
         public async Task UpdateAsync( Guid id, Ring ring )
@@ -271,12 +271,11 @@ namespace WarriorsGuild.Rings
 
             if ( ss == null )
             {
-                var approvalrecord = await _dbContext.RingApprovals.Where( ra => ra.UserId == userIdForStatuses && ra.RingId == ringForStatus.RingId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue ).OrderByDescending( r => r.ApprovedAt ).FirstOrDefaultAsync();
+                var approvalrecord = await Repo.GetLatestPendingOrApprovedApprovalForRingAsync( ringForStatus.RingId, userIdForStatuses );
                 if ( approvalrecord == null || approvalrecord.ApprovedAt.HasValue )
                 {
-                    var statusToSave = _ringMapper.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, warriorCompletedTs: Helpers.GetCurrentDateTime(), null, userIdForStatuses );
-                    _dbContext.RingStatuses.Add( statusToSave );
-                    await _dbContext.SaveChangesAsync();
+                    var statusToSave = _ringMapper.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, warriorCompletedTs: _dateTimeProvider.GetCurrentDateTime(), null, userIdForStatuses );
+                    await Repo.PostRingStatusAsync( statusToSave );
                     response.Success = true;
                 }
                 else
@@ -310,46 +309,12 @@ namespace WarriorsGuild.Rings
 
         public async Task<IEnumerable<PendingApprovalDetail>> GetPendingApprovalsAsync( Guid userId )
         {
-            var response = new List<PendingApprovalDetail>();
-            var approvalRecords = await _dbContext.RingApprovals.Include( "Ring" ).Where( ra => ra.UserId == userId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue && !ra.ApprovedAt.HasValue ).ToArrayAsync();
-            foreach ( var ar in approvalRecords )
-            {
-                var requirements = _dbContext.RingRequirements.Where( r => r.RingId == ar.RingId );
-                var statusEntries = _dbContext.RingStatuses.Where( rs => rs.RingId == ar.RingId && rs.UserId == userId && !rs.GuardianCompleted.HasValue && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue );
-                var pendingRequirements = await requirements.Where( rr => statusEntries.Any( se => se.RingRequirementId == rr.Id ) ).ToArrayAsync();
-                response.Add( new PendingApprovalDetail()
-                {
-                    ApprovalRecordId = ar.Id,
-                    RingId = ar.RingId,
-                    RingName = ar.Ring.Name,
-                    RingImageUploaded = ar.Ring.ImageUploaded,
-                    WarriorCompleted = ar.CompletedAt,
-                    GuardianConfirmed = ar.ApprovedAt,
-                    //PercentComplete = ar.PercentComplete,
-                    ImageExtension = ar.Ring.ImageExtension,
-                    UnconfirmedRequirements = pendingRequirements
-                } );
-            }
-            return response;
+            return await Repo.GetPendingApprovalDetailsAsync( userId );
         }
 
         public async Task<PendingApprovalDetail> GetPendingApprovalAsync( Guid userId, Guid ringId )
         {
-            PendingApprovalDetail response = null;
-            var approvalRecords = await _dbContext.RingApprovals.Include( "Ring" ).Where( ra => ra.UserId == userId && ra.RingId == ringId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue ).FirstOrDefaultAsync();
-            if ( approvalRecords != null )
-            {
-                response = new PendingApprovalDetail()
-                {
-                    ApprovalRecordId = approvalRecords.Id,
-                    RingId = approvalRecords.RingId,
-                    RingName = approvalRecords.Ring.Name,
-                    RingImageUploaded = approvalRecords.Ring.ImageUploaded,
-                    WarriorCompleted = approvalRecords.CompletedAt,
-                    GuardianConfirmed = approvalRecords.ApprovedAt
-                };
-            }
-            return response;
+            return await Repo.GetPendingApprovalDetailByRingAsync( userId, ringId );
         }
 
         public async Task<RingApproval> SubmitForApprovalAsync( Guid userId, Guid ringId )
@@ -413,7 +378,7 @@ namespace WarriorsGuild.Rings
                 else if ( !approvalRecord.ApprovedAt.HasValue )
                 {
                     var ss = await _dbContext.RingStatuses.Where( rs => rs.RingId == approvalRecord.RingId && rs.UserId == approvalRecord.UserId && !rs.GuardianCompleted.HasValue && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue ).ToArrayAsync();
-                    var currentTime = Helpers.GetCurrentDateTime();
+                    var currentTime = _dateTimeProvider.GetCurrentDateTime();
                     foreach ( var s in ss )
                     {
                         s.GuardianCompleted = currentTime;

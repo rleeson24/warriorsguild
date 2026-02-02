@@ -2,7 +2,6 @@ using Moq;
 using NUnit.Framework;
 using System.Threading.Tasks;
 using WarriorsGuild.Areas.Payments.Mappers;
-using WarriorsGuild.DataAccess;
 using WarriorsGuild.Providers.Payments;
 using WarriorsGuild.Providers.Payments.Models;
 
@@ -13,7 +12,7 @@ namespace WarriorsGuild.Tests.Providers.Payments
     {
         private MockRepository mockRepository;
 
-        private Mock<IGuildDbContext> mockGuildDbContext;
+        private Mock<IAddOnPriceOptionRepository> mockAddOnPriceOptionRepository;
         private Mock<IStripePlanProvider> mockStripePlanProvider;
         private Mock<IPriceOptionMapper> mockPriceOptionMapper;
         private Mock<IBillingPlanRequestMapper> mockBillingPlanRequestMapper;
@@ -23,7 +22,7 @@ namespace WarriorsGuild.Tests.Providers.Payments
         {
             this.mockRepository = new MockRepository( MockBehavior.Strict );
 
-            this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
+            this.mockAddOnPriceOptionRepository = this.mockRepository.Create<IAddOnPriceOptionRepository>();
             this.mockStripePlanProvider = this.mockRepository.Create<IStripePlanProvider>();
             this.mockPriceOptionMapper = this.mockRepository.Create<IPriceOptionMapper>();
             this.mockBillingPlanRequestMapper = this.mockRepository.Create<IBillingPlanRequestMapper>();
@@ -38,7 +37,7 @@ namespace WarriorsGuild.Tests.Providers.Payments
         private BillingPlanManager CreateManager()
         {
             return new BillingPlanManager(
-                this.mockGuildDbContext.Object,
+                this.mockAddOnPriceOptionRepository.Object,
                 this.mockStripePlanProvider.Object,
                 this.mockPriceOptionMapper.Object,
                 this.mockBillingPlanRequestMapper.Object );

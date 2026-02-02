@@ -1,0 +1,77 @@
+---
+description: DbContext usage boundary - restrict to repositories except for cross-repo transactions
+globs: **/*.cs
+alwaysApply: true
+---
+
+# DbContext and Repository Boundary
+
+## Principle
+
+**DbContext usage must be limited to repository methods.** Providers, services, controllers, and other application layers must NOT inject or use `IGuildDbContext` / `DbContext` directly.
+
+## Exception: Cross-Repository Transactions
+
+When a process needs to update the database using **multiple repositories** and requires **all operations to run in a single transaction**, inject `IUnitOfWork` and call `SaveChangesAsync()` once after all repository operations.
+
+```csharp
+// ✅ Orchestrator for cross-repo transaction
+public class OrderFulfillmentService
+{
+    private readonly IRankRepository _rankRepo;
+    private readonly IRingRepository _ringRepo;
+    private readonly IUnitOfWork _uow;
+
+    public async Task FulfillAsync(...)
+    {
+        _rankRepo.Update(...);
+        _ringRepo.Add(...);
+        await _uow.SaveChangesAsync();  // Single commit for both
+    }
+}
+```
+
+`IUnitOfWork` shares the same scoped DbContext as repositories, so one `SaveChangesAsync()` persists all staged changes.
+
+## Correct Usage
+
+```csharp
+// ✅ Repository - correct
+public class RankRepository : IRankRepository
+{
+    private readonly IGuildDbContext _dbContext;
+    public RankRepository(IGuildDbContext dbContext) => _dbContext = dbContext;
+    public IQueryable<Rank> List() => _dbContext.Ranks.OrderBy(r => r.Index);
+}
+
+// ✅ Provider - uses repository only
+public class RanksProvider : IRanksProvider
+{
+    private readonly IRankRepository _repo;
+    public RanksProvider(IRankRepository repo) => _repo = repo;
+    public async Task<IEnumerable<Rank>> GetListAsync(Guid userId) 
+        => await _repo.List().ToArrayAsync();
+}
+```
+
+## Violations to Fix
+
+```csharp
+// ❌ Provider injecting and using DbContext directly
+public class SomeProvider : ISomeProvider
+{
+    private readonly IGuildDbContext _dbContext;  // Violation
+    public SomeProvider(IGuildDbContext dbContext) => _dbContext = dbContext;
+    public async Task DoWork() => await _dbContext.SomeSet.ToListAsync();  // Violation
+}
+```
+
+**Fix**: Move the data access logic into a repository. Inject `ISomeRepository` into the provider and call repository methods instead.
+
+## Refactoring Steps
+
+1. Identify the DbSet/query used in the provider
+2. Add a method to the appropriate repository (or create a new repository) that performs that data access
+3. Add the method to the repository interface
+4. Inject the repository into the provider and call the new method
+5. Remove the `IGuildDbContext` dependency from the provider

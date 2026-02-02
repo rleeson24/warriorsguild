@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -11,7 +11,7 @@ namespace WarriorsGuild.Helpers.Utilities
             return DateTime.UtcNow;
         }
 
-        public Boolean IsValidEmail( String email )
+        public bool IsValidEmail( string email )
         {
             if ( string.IsNullOrWhiteSpace( email ) )
                 return false;
