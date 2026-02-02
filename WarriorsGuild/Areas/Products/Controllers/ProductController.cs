@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WarriorsGuild.DataAccess;
 using WarriorsGuild.DataAccess.Models;
@@ -17,14 +17,14 @@ namespace WarriorsGuild.Areas.Products.Controllers
     {
         private readonly IGuildDbContext _dbContext;
 
-        private readonly IHelpers Helpers;
+        private readonly IEmailValidator _emailValidator;
         private readonly IEmailProvider EmailProvider;
         private IUserProvider _userProvider;
 
-        public ProductController( IGuildDbContext dbContext, IHelpers helpers, IEmailProvider emailProvider, IUserProvider userProvider )
+        public ProductController( IGuildDbContext dbContext, IEmailValidator emailValidator, IEmailProvider emailProvider, IUserProvider userProvider )
         {
             _dbContext = dbContext;
-            Helpers = helpers;
+            _emailValidator = emailValidator;
             EmailProvider = emailProvider;
             _userProvider = userProvider;
         }
@@ -44,7 +44,7 @@ namespace WarriorsGuild.Areas.Products.Controllers
         {
             var myUserId = _userProvider.GetMyUserId( User );
             var entries = _dbContext.Set<InvitedEmailAddress>();
-            if ( !Helpers.IsValidEmail( emailAddress ) )
+            if ( !_emailValidator.IsValidEmail( emailAddress ) )
             {
                 return BadRequest( "Email address is not in a valid format" );
             }

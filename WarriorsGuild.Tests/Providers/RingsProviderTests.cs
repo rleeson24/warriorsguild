@@ -31,7 +31,7 @@ namespace WarriorsGuild.Tests.Providers
         private Mock<IGuildDbContext> mockGuildDbContext;
         private Mock<IRingRepository> mockRingRepository;
         private Mock<IRingMapper> mockRingMapper;
-        private Mock<IHelpers> mockHelpers;
+        private Mock<IDateTimeProvider> mockDateTimeProvider;
         private Mock<IBlobProvider> mockAttachmentProvider;
         private Mock<IUserProvider> mockUserProvider;
         private Mock<IEmailProvider> emailProvider;
@@ -47,7 +47,7 @@ namespace WarriorsGuild.Tests.Providers
             this.mockRingRepository = this.mockRepository.Create<IRingRepository>();
             this.mockRingMapper = this.mockRepository.Create<IRingMapper>();
             this.mockUserProvider = this.mockRepository.Create<IUserProvider>();
-            this.mockHelpers = this.mockRepository.Create<IHelpers>();
+            this.mockDateTimeProvider = this.mockRepository.Create<IDateTimeProvider>();
             this.mockAttachmentProvider = this.mockRepository.Create<IBlobProvider>();
             this.emailProvider = this.mockRepository.Create<IEmailProvider>();
             this.httpContextAccessor = this.mockRepository.Create<IHttpContextAccessor>();
@@ -66,7 +66,7 @@ namespace WarriorsGuild.Tests.Providers
                 this.mockGuildDbContext.Object,
                 this.mockRingRepository.Object,
                 this.mockRingMapper.Object,
-                this.mockHelpers.Object,
+                this.mockDateTimeProvider.Object,
                 this.mockUserProvider.Object,
                 this.mockAttachmentProvider.Object, emailProvider.Object, httpContextAccessor.Object, logger.Object );
         }
@@ -240,7 +240,7 @@ namespace WarriorsGuild.Tests.Providers
             var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>(_fixture.Build<RingStatus>().CreateMany( 8 ) ), false, true );
             mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var newRingStatus =_fixture.Build<RingStatus>().Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
 
@@ -274,7 +274,7 @@ namespace WarriorsGuild.Tests.Providers
             var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( new RingStatus[ 0 ] ), false, true );
             mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var newRingStatus =_fixture.Build<RingStatus>().Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
 
@@ -311,7 +311,7 @@ namespace WarriorsGuild.Tests.Providers
             var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( ringStatuses ), false, true );
             mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var newRingStatus =_fixture.Build<RingStatus>().Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
             mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
@@ -349,7 +349,7 @@ namespace WarriorsGuild.Tests.Providers
             var ringStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( ringStatuses ), false, true );
             mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( ringStatusesDbSet.Object );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var newRingStatus =_fixture.Build<RingStatus>().With( rs => rs.RingId, ringForStatus.RingId ).With( rs => rs.RingRequirementId, ringRequirements.Last().Id ).Create();
             mockRingMapper.Setup( m => m.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRingStatus );
             mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
@@ -618,7 +618,7 @@ namespace WarriorsGuild.Tests.Providers
             requirementStatus.AddRange( dummyStatuses );
             mockGuildDbContext.Setup( m => m.RingStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingStatus>( requirementStatus ) ).Object );
             var currentDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
             mockGuildDbContext.Setup( m => m.RingApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RingApproval>( ringApprovals ) ).Object );
 
             mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );

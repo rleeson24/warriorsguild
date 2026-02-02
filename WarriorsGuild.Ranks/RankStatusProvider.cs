@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -26,19 +26,19 @@ namespace WarriorsGuild.Ranks
         private IRankMapper _rankMapper { get; }
         private IBlobProvider _fileProvider { get; }
         private IRanksProviderHelpers RpHelpers { get; }
-        private IHelpers Helpers { get; }
+        private IDateTimeProvider _dateTimeProvider { get; }
 
         private IGuildDbContext _dbContext { get; }
         private IRankRepository _repo { get; }
 
-        public RankStatusProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IHelpers helpers, IRanksProviderHelpers rpHelpers,
+        public RankStatusProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IDateTimeProvider dateTimeProvider, IRanksProviderHelpers rpHelpers,
                             IBlobProvider fileProvider )
         {
             _dbContext = dbContext;
             _rankMapper = rankMapper;
             _fileProvider = fileProvider;
             RpHelpers = rpHelpers;
-            Helpers = helpers;
+            _dateTimeProvider = dateTimeProvider;
             _repo = repo;
         }
         public IQueryable<RankStatus> RankStatuses()
@@ -68,7 +68,7 @@ namespace WarriorsGuild.Ranks
                         int totalCompleted = await RpHelpers.GetTotalCompletedPercent( rankForStatus.RankId, userIdForStatuses );
                         if ( totalCompleted - percentApproved < 33 )
                         {
-                            var statusToSave = _rankMapper.CreateRankStatus( rankForStatus.RankId, rankForStatus.RankRequirementId, warriorCompletedTs: Helpers.GetCurrentDateTime(), null, userIdForStatuses );
+                            var statusToSave = _rankMapper.CreateRankStatus( rankForStatus.RankId, rankForStatus.RankRequirementId, warriorCompletedTs: _dateTimeProvider.GetCurrentDateTime(), null, userIdForStatuses );
                             response.Status = statusToSave;
                             _dbContext.RankStatuses.Add( statusToSave );
 

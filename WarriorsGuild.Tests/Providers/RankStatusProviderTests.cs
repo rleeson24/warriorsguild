@@ -40,7 +40,7 @@ namespace WarriorsGuild.Tests.Providers
         private Mock<IGuildDbContext> mockGuildDbContext;
         private Mock<IRankRepository> mockRankRepository;
         private Mock<IRankMapper> mockRankMapper;
-        private Mock<IHelpers> mockHelpers;
+        private Mock<IDateTimeProvider> mockDateTimeProvider;
         private Mock<IRanksProviderHelpers> mockRpHelpers;
         private Mock<IBlobProvider> mockAttachmentProvider;
 
@@ -52,7 +52,7 @@ namespace WarriorsGuild.Tests.Providers
             this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
             this.mockRankRepository = this.mockRepository.Create<IRankRepository>();
             this.mockRankMapper = this.mockRepository.Create<IRankMapper>();
-            this.mockHelpers = this.mockRepository.Create<IHelpers>();
+            this.mockDateTimeProvider = this.mockRepository.Create<IDateTimeProvider>();
             this.mockAttachmentProvider = this.mockRepository.Create<IBlobProvider>();
             this.mockRpHelpers = this.mockRepository.Create<IRanksProviderHelpers>();
         }
@@ -69,7 +69,7 @@ namespace WarriorsGuild.Tests.Providers
                 this.mockGuildDbContext.Object,
                 this.mockRankRepository.Object,
                 this.mockRankMapper.Object,
-                this.mockHelpers.Object,
+                this.mockDateTimeProvider.Object,
                 this.mockRpHelpers.Object,
                 this.mockAttachmentProvider.Object);
         }
@@ -80,7 +80,7 @@ namespace WarriorsGuild.Tests.Providers
             
             // Arrange
             var unitUnderTest = this.CreateProvider();
-            IQueryable<RankStatus> expectedRanks = new List<RankStatus>() {_fixture.Build<RankStatus>().Create() }.AsQueryable();
+            IQueryable<RankStatus> expectedRanks = CreateAsyncQueryable( new List<RankStatus>() { _fixture.Build<RankStatus>().Create() } );
             mockRankRepository.Setup( m => m.RankStatuses() ).Returns( expectedRanks );
 
             // Act
@@ -98,8 +98,8 @@ namespace WarriorsGuild.Tests.Providers
             var unitUnderTest = this.CreateProvider();
             var rankId = Guid.NewGuid();
             var userId = USERID;
-            var expectedStatuses = _fixture.Build<RankStatus>().With( s => s.RankRequirementId, rankId ).With( s => s.UserId, userId ).CreateMany(6);
-            mockRankRepository.Setup( m => m.RankStatuses() ).Returns( expectedStatuses.AsQueryable() );
+            var expectedStatuses = _fixture.Build<RankStatus>().With( s => s.RankId, rankId ).With( s => s.UserId, userId ).With( s => s.RecalledByWarriorTs, (DateTime?)null ).With( s => s.ReturnedTs, (DateTime?)null ).CreateMany( 6 );
+            mockRankRepository.Setup( m => m.RankStatuses() ).Returns( CreateAsyncQueryable( expectedStatuses ) );
 
             // Act
             var result = await unitUnderTest.GetStatusesAsync(
@@ -199,7 +199,7 @@ namespace WarriorsGuild.Tests.Providers
             var rankStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>(_fixture.Build<RankStatus>().CreateMany( 8 ) ), false, true );
             mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( rankStatusesDbSet.Object );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var newRankStatus =_fixture.Build<RankStatus>().Create();
             mockRankMapper.InSequence( sequence ).Setup( m => m.CreateRankStatus( rankForStatus.RankId, rankForStatus.RankRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRankStatus );
             rankStatusesDbSet.InSequence( sequence ).Setup( m => m.Add( newRankStatus ) )
@@ -236,7 +236,7 @@ namespace WarriorsGuild.Tests.Providers
             mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( rankStatusesDbSet.Object );
             mockRpHelpers.Setup( m => m.GetTotalCompletedPercent( rankForStatus.RankId, userIdForStatuses ) ).Returns( Task.FromResult( 10 ) );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var newRankStatus =_fixture.Build<RankStatus>().Create();
             mockRankMapper.InSequence( sequence ).Setup( m => m.CreateRankStatus( rankForStatus.RankId, rankForStatus.RankRequirementId, dummyDateTime, null, userIdForStatuses ) ).Returns( newRankStatus );
 
@@ -273,7 +273,7 @@ namespace WarriorsGuild.Tests.Providers
             RankStatus addedRankStatus = null;
             mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( rankApprovalsDbSet.Object );
             var dummyDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( dummyDateTime );
             var rankStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( new RankStatus[ 0 ] ), false, true );
             mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( rankStatusesDbSet.Object );
             var newRankStatus =_fixture.Build<RankStatus>().Create();

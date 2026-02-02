@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -72,17 +72,17 @@ namespace WarriorsGuild.Rings
         private IGuildDbContext _dbContext { get; }
         private IRingRepository Repo { get; }
         public IRingMapper _ringMapper { get; }
-        public IHelpers Helpers { get; }
+        public IDateTimeProvider _dateTimeProvider { get; }
         public IUserProvider UserProvider { get; }
         public IBlobProvider FileProvider { get; }
         private ILogger<RingsProvider> Logger { get; }
 
-        public RingsProvider( IGuildDbContext dbContext,IRingRepository db, IRingMapper ringMapper, IHelpers helpers, IUserProvider userProvider, IBlobProvider fileProvider, IEmailProvider emailProvider, IHttpContextAccessor httpContextAccessor, ILogger<RingsProvider> logger )
+        public RingsProvider( IGuildDbContext dbContext,IRingRepository db, IRingMapper ringMapper, IDateTimeProvider dateTimeProvider, IUserProvider userProvider, IBlobProvider fileProvider, IEmailProvider emailProvider, IHttpContextAccessor httpContextAccessor, ILogger<RingsProvider> logger )
         {
             _dbContext = dbContext;
             Repo = db;
             _ringMapper = ringMapper;
-            Helpers = helpers;
+            _dateTimeProvider = dateTimeProvider;
             UserProvider = userProvider;
             FileProvider = fileProvider;
             this.emailProvider = emailProvider;
@@ -274,7 +274,7 @@ namespace WarriorsGuild.Rings
                 var approvalrecord = await _dbContext.RingApprovals.Where( ra => ra.UserId == userIdForStatuses && ra.RingId == ringForStatus.RingId && !ra.RecalledByWarriorTs.HasValue && !ra.ReturnedTs.HasValue ).OrderByDescending( r => r.ApprovedAt ).FirstOrDefaultAsync();
                 if ( approvalrecord == null || approvalrecord.ApprovedAt.HasValue )
                 {
-                    var statusToSave = _ringMapper.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, warriorCompletedTs: Helpers.GetCurrentDateTime(), null, userIdForStatuses );
+                    var statusToSave = _ringMapper.CreateRingStatus( ringForStatus.RingId, ringForStatus.RingRequirementId, warriorCompletedTs: _dateTimeProvider.GetCurrentDateTime(), null, userIdForStatuses );
                     _dbContext.RingStatuses.Add( statusToSave );
                     await _dbContext.SaveChangesAsync();
                     response.Success = true;
@@ -413,7 +413,7 @@ namespace WarriorsGuild.Rings
                 else if ( !approvalRecord.ApprovedAt.HasValue )
                 {
                     var ss = await _dbContext.RingStatuses.Where( rs => rs.RingId == approvalRecord.RingId && rs.UserId == approvalRecord.UserId && !rs.GuardianCompleted.HasValue && !rs.RecalledByWarriorTs.HasValue && !rs.ReturnedTs.HasValue ).ToArrayAsync();
-                    var currentTime = Helpers.GetCurrentDateTime();
+                    var currentTime = _dateTimeProvider.GetCurrentDateTime();
                     foreach ( var s in ss )
                     {
                         s.GuardianCompleted = currentTime;

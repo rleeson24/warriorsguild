@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -27,14 +27,14 @@ namespace WarriorsGuild.Ranks
         private IRanksProviderHelpers RpHelpers { get; }
 
         private IRankMapper _rankMapper { get; }
-        private IHelpers Helpers { get; }
+        private IDateTimeProvider _dateTimeProvider { get; }
         private ILogger<RanksProvider> Logger { get; }
         private IUserProvider _userProvider { get; }
 
         private IGuildDbContext _dbContext { get; }
         private IRankRepository _repo { get; }
 
-        public RankApprovalsProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IHelpers helpers, IRanksProviderHelpers rpHelpers,
+        public RankApprovalsProvider( IGuildDbContext dbContext, IRankRepository repo, IRankMapper rankMapper, IDateTimeProvider dateTimeProvider, IRanksProviderHelpers rpHelpers,
                             IUserProvider userProvider, IRankStatusProvider rankStatusProvider, ILogger<RanksProvider> logger, IEmailProvider emailProvider,
                             IHttpContextAccessor httpContextAccessor )
         {
@@ -43,7 +43,7 @@ namespace WarriorsGuild.Ranks
             _httpContextAccessor = httpContextAccessor;
             this.rankStatusProvider = rankStatusProvider;
             _rankMapper = rankMapper;
-            Helpers = helpers;
+            _dateTimeProvider = dateTimeProvider;
             Logger = logger;
             _userProvider = userProvider;
             _dbContext = dbContext;
@@ -129,7 +129,7 @@ namespace WarriorsGuild.Ranks
                 else if ( percentApproved >= 33 ) lastApprovedMilestone = 33;
                 if ( totalCompleted == 100 || totalCompleted - lastApprovedMilestone >= 33 )
                 {
-                    var approvalEntry = _rankMapper.CreateRankApproval( rankId: rankId, userIdForStatuses, totalCompleted, Helpers.GetCurrentDateTime() );
+                    var approvalEntry = _rankMapper.CreateRankApproval( rankId: rankId, userIdForStatuses, totalCompleted, _dateTimeProvider.GetCurrentDateTime() );
                     _dbContext.RankApprovals.Add( approvalEntry );
                     await _dbContext.SaveChangesAsync();
                     var rank = _dbContext.Set<Rank>().Find( rankId );
@@ -188,7 +188,7 @@ namespace WarriorsGuild.Ranks
                     var relatedRingsAndCrossesAreApproved = await RpHelpers.AllAssociatedRingsAndCrossesAreCompletedAndApprovedAsync( approvalRecord.RankId, ss.Select( s => s.RankRequirementId ), approvalRecord.UserId );
                     if ( relatedRingsAndCrossesAreApproved )
                     {
-                        var currentTime = Helpers.GetCurrentDateTime();
+                        var currentTime = _dateTimeProvider.GetCurrentDateTime();
                         foreach ( var s in ss )
                         {
                             s.GuardianCompleted = currentTime;

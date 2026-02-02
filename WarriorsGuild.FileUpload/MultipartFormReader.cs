@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.WebUtilities;
@@ -235,8 +235,8 @@ namespace WarriorsGuild.Helpers.Utilities.Files
                 MediaTypeHeaderValue.TryParse( section.ContentType, out var mediaType );
 
             // UTF-7 is insecure and shouldn't be honored. UTF-8 succeeds in 
-            // most cases.
-            if ( !hasMediaTypeHeader || Encoding.UTF7.Equals( mediaType.Encoding ) )
+            // most cases. (Encoding.UTF7 obsolete in .NET 5+; check by name)
+            if ( !hasMediaTypeHeader || string.Equals( mediaType.Encoding?.WebName, "utf-7", StringComparison.OrdinalIgnoreCase ) )
             {
                 return Encoding.UTF8;
             }

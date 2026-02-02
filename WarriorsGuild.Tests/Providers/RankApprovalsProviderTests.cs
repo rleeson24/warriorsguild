@@ -40,7 +40,7 @@ namespace WarriorsGuild.Tests.Providers
         private Mock<IGuildDbContext> mockGuildDbContext;
         private Mock<IRankRepository> mockRankRepository;
         private Mock<IRankMapper> mockRankMapper;
-        private Mock<IHelpers> mockHelpers;
+        private Mock<IDateTimeProvider> mockDateTimeProvider;
         private Mock<IRanksProviderHelpers> mockRpHelpers;
         private Mock<IUserProvider> mockUserProvider;
         private Mock<ILogger<RanksProvider>> mockLogger;
@@ -58,7 +58,7 @@ namespace WarriorsGuild.Tests.Providers
             this.mockRankRepository = this.mockRepository.Create<IRankRepository>();
             this.mockRankMapper = this.mockRepository.Create<IRankMapper>();
             this.mockUserProvider = this.mockRepository.Create<IUserProvider>();
-            this.mockHelpers = this.mockRepository.Create<IHelpers>();
+            this.mockDateTimeProvider = this.mockRepository.Create<IDateTimeProvider>();
             this.mockRpHelpers = this.mockRepository.Create<IRanksProviderHelpers>();
             this.mockLogger = this.mockRepository.Create<ILogger<RanksProvider>>();
             this.mockEmailProvider = this.mockRepository.Create<IEmailProvider>();
@@ -79,7 +79,7 @@ namespace WarriorsGuild.Tests.Providers
                 this.mockGuildDbContext.Object,
                 this.mockRankRepository.Object,
                 this.mockRankMapper.Object,
-                this.mockHelpers.Object,
+                this.mockDateTimeProvider.Object,
                 this.mockRpHelpers.Object,
                 this.mockUserProvider.Object,
                 this.mockRankStatusProvider.Object,
@@ -534,7 +534,7 @@ namespace WarriorsGuild.Tests.Providers
             mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( requirementStatus ) ).Object );
 
             var currentDateTime = DateTime.UtcNow;
-            mockHelpers.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
+            mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
 
             mockUserProvider.Setup( m => m.UserIsRelatedToWarrior( myUserId, userIdForStatuses ) ).Returns( Task.FromResult( true ) );
 

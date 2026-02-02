@@ -29,7 +29,8 @@ using WarriorsGuild.Helpers.Filters;
 using WarriorsGuild.Helpers.Handlers.Errors;
 using WarriorsGuild.Helpers.Utilities;
 using WarriorsGuild.Helpers.Utilities.Models;
-using Microsoft.Extensions.Azure;
+using WarriorsGuild.Providers.Payments;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 
 var builder = WebApplication.CreateBuilder( args );
 
@@ -158,7 +159,7 @@ void ConfigureServices( IServiceCollection services, IWebHostEnvironment env )
         options.CustomSchemaIds( x => x.FullName );
     } );
 
-    services.AddApplicationInsightsTelemetry();
+    services.AddOpenTelemetry().UseAzureMonitor();
 }
 
 static void ConfigureControllersWithPages( IServiceCollection services )
@@ -316,6 +317,9 @@ void ConfigureContainer( ServiceRegistry services )
     //services.AddScoped<IRanksProviderHelpers, RanksProviderHelpers>();
     //services.AddScoped<IBlobProvider, BlobProvider>();
     //services.AddScoped<IHelpers, Helpers>();
+    services.AddScoped<IDateTimeProvider, Helpers>();
+    services.AddScoped<IEmailValidator, Helpers>();
+    services.AddScoped<IAddOnPriceOptionRepository, AddOnPriceOptionRepository>();
 
     //services.AddScoped<IRecordRingCompletion, RecordRingCompletion>();
     //services.AddScoped<IRingValidator, RingValidator>();
