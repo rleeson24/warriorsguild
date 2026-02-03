@@ -2,7 +2,12 @@
 	"version": "1.0.0",
 	"name": "asp.net",
 	"private": true,
+	"scripts": {
+		"bundle": "node Scripts/esbuild-bundle.mjs",
+		"build": "npm run bundle"
+	},
 	"devDependencies": {
+		"esbuild": "^0.24.0",
 		"@types/jasmine": "3.4.1",
 		"@types/jasmine-matchers": "0.2.32",
 		"@types/jquery": "3.5.4",

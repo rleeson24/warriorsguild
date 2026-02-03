@@ -37,7 +37,8 @@ namespace WarriorsGuild.Tests.Providers
 
         private Guid USERID = Guid.NewGuid();
 
-        private Mock<IGuildDbContext> mockGuildDbContext;
+        private Mock<IUnitOfWork> mockUnitOfWork;
+        private Mock<IAccountRepository> mockAccountRepository;
         private Mock<IRankRepository> mockRankRepository;
         private Mock<IRankMapper> mockRankMapper;
         private Mock<IDateTimeProvider> mockDateTimeProvider;
@@ -54,7 +55,8 @@ namespace WarriorsGuild.Tests.Providers
         {
             this.mockRepository = new MockRepository( MockBehavior.Strict );
 
-            this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
+            this.mockUnitOfWork = this.mockRepository.Create<IUnitOfWork>();
+            this.mockAccountRepository = this.mockRepository.Create<IAccountRepository>();
             this.mockRankRepository = this.mockRepository.Create<IRankRepository>();
             this.mockRankMapper = this.mockRepository.Create<IRankMapper>();
             this.mockUserProvider = this.mockRepository.Create<IUserProvider>();
@@ -76,8 +78,9 @@ namespace WarriorsGuild.Tests.Providers
         private RankApprovalsProvider CreateProvider()
         {
             return new RankApprovalsProvider(
-                this.mockGuildDbContext.Object,
+                this.mockUnitOfWork.Object,
                 this.mockRankRepository.Object,
+                this.mockAccountRepository.Object,
                 this.mockRankMapper.Object,
                 this.mockDateTimeProvider.Object,
                 this.mockRpHelpers.Object,
@@ -85,7 +88,7 @@ namespace WarriorsGuild.Tests.Providers
                 this.mockRankStatusProvider.Object,
                 this.mockLogger.Object,
                 this.mockEmailProvider.Object,
-                mockHttpContextAccessor.Object);
+                this.mockHttpContextAccessor.Object);
         }
 
         public async Task NotifyGuardiansOfRequestForPromotion()
@@ -105,8 +108,7 @@ namespace WarriorsGuild.Tests.Providers
             // Arrange
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
-            var rankApprovals =_fixture.Build<RankApproval>().With( ra => ra.ApprovedAt, (DateTime?)null ).CreateMany( 3 );
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetPendingRankApprovalsWithRankAsync( userIdForStatuses ) ).ReturnsAsync( Array.Empty<RankApproval>() );
 
             // Act
             var result = await unitUnderTest.GetPendingApprovalsAsync(
@@ -123,8 +125,7 @@ namespace WarriorsGuild.Tests.Providers
             // Arrange
             var unitUnderTest = this.CreateProvider();
             var userIdForStatuses = USERID;
-            var rankApprovals =_fixture.Build<RankApproval>().With( ra => ra.UserId, userIdForStatuses ).CreateMany( 3 );
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetPendingRankApprovalsWithRankAsync( userIdForStatuses ) ).ReturnsAsync( Array.Empty<RankApproval>() );
 
             // Act
             var result = await unitUnderTest.GetPendingApprovalsAsync(
@@ -155,10 +156,13 @@ namespace WarriorsGuild.Tests.Providers
                                                                                                           .With( rs => rs.GuardianCompleted, (DateTime?)null )
                                                                                                           .With( rs => rs.UserId, userIdForStatuses )
                                                                                                           .Without( ra => ra.RecalledByWarriorTs ).Without( ra => ra.ReturnedTs ).Create() ).ToArray();
-            var requirements =_fixture.Build<RankRequirement>().CreateMany( 10 ).Concat( relatedRequirements );
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
-            mockGuildDbContext.Setup( m => m.RankRequirements ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankRequirement>( requirements ) ).Object );
-            mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( relatedStatuses.Concat( unapprovedRelatedStatuses ) ) ).Object );
+            var approvalRecord = rankApprovals.Skip( 2 ).First();
+            var rank = _fixture.Build<Rank>().With( r => r.Id, approvalRelatedRankId ).Create();
+            approvalRecord.Rank = rank;
+            approvalRecord.RankId = approvalRelatedRankId;
+            mockRankRepository.Setup( m => m.GetPendingRankApprovalsWithRankAsync( userIdForStatuses ) ).ReturnsAsync( new[] { approvalRecord } );
+            var pendingReqs = relatedRequirements.Skip( 3 ).Take( 3 ).ToArray();
+            mockRankRepository.Setup( m => m.GetPendingRequirementsWithStatusForApprovalAsync( approvalRelatedRankId, userIdForStatuses ) ).ReturnsAsync( (pendingReqs, unapprovedRelatedStatuses) );
             var i = 0;
             var reqViewModels = new List<RankRequirementViewModel>();
             foreach ( var a in relatedRequirements.Skip( 3 ).Take( 3 ) )
@@ -179,7 +183,7 @@ namespace WarriorsGuild.Tests.Providers
                 var relatedStatus = unapprovedRelatedStatuses.Single( s => s.RankRequirementId == a.Id );
                 var viewModel =_fixture.Build<RankRequirementViewModel>().Create();
                 reqViewModels.Add( viewModel );
-                mockRankMapper.Setup( m => m.CreateRequirementViewModel( a, relatedStatus.WarriorCompleted, null, associatedRings, It.Is<IEnumerable<MinimalCrossDetail>>( _ => _.Any() == false ), It.Is<IEnumerable<MinimalGoalDetail>>( _ => _.Any() == false ) ) ).Returns( viewModel );
+                mockRankMapper.Setup( m => m.CreateRequirementViewModel( a, relatedStatus.WarriorCompleted, null, associatedRings ?? Array.Empty<MinimalRingDetail>(), It.Is<IEnumerable<MinimalCrossDetail>>( _ => _.Any() == false ), It.Is<IEnumerable<MinimalGoalDetail>>( _ => _.Any() == false ) ) ).Returns( viewModel );
             }
 
             // Act
@@ -189,11 +193,11 @@ namespace WarriorsGuild.Tests.Providers
             // Assert
             Assert.AreEqual( 1, result.Count() );
             var resultRecord = result.First();
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Id, resultRecord.ApprovalRecordId );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().PercentComplete, resultRecord.PercentComplete );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().RankId, resultRecord.RankId );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Rank.Name, resultRecord.RankName );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Rank.ImageUploaded, resultRecord.RankImageUploaded );
+            Assert.AreEqual( approvalRecord.Id, resultRecord.ApprovalRecordId );
+            Assert.AreEqual( approvalRecord.PercentComplete, resultRecord.PercentComplete );
+            Assert.AreEqual( approvalRecord.RankId, resultRecord.RankId );
+            Assert.AreEqual( approvalRecord.Rank.Name, resultRecord.RankName );
+            Assert.AreEqual( approvalRecord.Rank.ImageUploaded, resultRecord.RankImageUploaded );
             Assert.IsTrue( resultRecord.UnconfirmedRequirements.SequenceEqual( reqViewModels ) );
         }
 
@@ -218,10 +222,13 @@ namespace WarriorsGuild.Tests.Providers
                                                                                                           .With( rs => rs.GuardianCompleted, (DateTime?)null )
                                                                                                           .With( rs => rs.UserId, userIdForStatuses )
                                                                                                           .With( ra => ra.RecalledByWarriorTs, (DateTime?)null ).With( ra => ra.ReturnedTs, (DateTime?)null ).Create() ).ToArray();
-            var requirements =_fixture.Build<RankRequirement>().CreateMany( 10 ).Concat( relatedRequirements );
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
-            mockGuildDbContext.Setup( m => m.RankRequirements ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankRequirement>( requirements ) ).Object );
-            mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( relatedStatuses.Concat( unapprovedRelatedStatuses ) ) ).Object );
+            var approvalRecord = rankApprovals.Skip( 2 ).First();
+            var rank = _fixture.Build<Rank>().With( r => r.Id, approvalRelatedRankId ).Create();
+            approvalRecord.Rank = rank;
+            approvalRecord.RankId = approvalRelatedRankId;
+            mockRankRepository.Setup( m => m.GetPendingRankApprovalsWithRankAsync( userIdForStatuses ) ).ReturnsAsync( new[] { approvalRecord } );
+            var pendingReqs = relatedRequirements.Skip( 3 ).Take( 3 ).ToArray();
+            mockRankRepository.Setup( m => m.GetPendingRequirementsWithStatusForApprovalAsync( approvalRelatedRankId, userIdForStatuses ) ).ReturnsAsync( (pendingReqs, unapprovedRelatedStatuses) );
             var i = 0;
             var reqViewModels = new List<RankRequirementViewModel>();
             foreach ( var a in relatedRequirements.Skip( 3 ).Take( 3 ) )
@@ -242,7 +249,7 @@ namespace WarriorsGuild.Tests.Providers
                 var relatedStatus = unapprovedRelatedStatuses.Single( s => s.RankRequirementId == a.Id );
                 var viewModel =_fixture.Build<RankRequirementViewModel>().Create();
                 reqViewModels.Add( viewModel );
-                mockRankMapper.Setup( m => m.CreateRequirementViewModel( a, relatedStatus.WarriorCompleted, null, It.Is<IEnumerable<MinimalRingDetail>>( _ => _.Any() == false ), associatedCrosses, It.Is<IEnumerable<MinimalGoalDetail>>( _ => _.Any() == false ) ) ).Returns( viewModel );
+                mockRankMapper.Setup( m => m.CreateRequirementViewModel( a, relatedStatus.WarriorCompleted, null, It.Is<IEnumerable<MinimalRingDetail>>( _ => _.Any() == false ), associatedCrosses ?? Array.Empty<MinimalCrossDetail>(), It.Is<IEnumerable<MinimalGoalDetail>>( _ => _.Any() == false ) ) ).Returns( viewModel );
             }
 
             // Act
@@ -252,11 +259,11 @@ namespace WarriorsGuild.Tests.Providers
             // Assert
             Assert.AreEqual( 1, result.Count() );
             var resultRecord = result.First();
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Id, resultRecord.ApprovalRecordId );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().PercentComplete, resultRecord.PercentComplete );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().RankId, resultRecord.RankId );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Rank.Name, resultRecord.RankName );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Rank.ImageUploaded, resultRecord.RankImageUploaded );
+            Assert.AreEqual( approvalRecord.Id, resultRecord.ApprovalRecordId );
+            Assert.AreEqual( approvalRecord.PercentComplete, resultRecord.PercentComplete );
+            Assert.AreEqual( approvalRecord.RankId, resultRecord.RankId );
+            Assert.AreEqual( approvalRecord.Rank.Name, resultRecord.RankName );
+            Assert.AreEqual( approvalRecord.Rank.ImageUploaded, resultRecord.RankImageUploaded );
             Assert.IsTrue( resultRecord.UnconfirmedRequirements.SequenceEqual( reqViewModels ) );
         }
 
@@ -281,10 +288,13 @@ namespace WarriorsGuild.Tests.Providers
                                                                                                           .With( rs => rs.GuardianCompleted, (DateTime?)null )
                                                                                                           .With( rs => rs.UserId, userIdForStatuses )
                                                                                                           .With( ra => ra.RecalledByWarriorTs, (DateTime?)null ).With( ra => ra.ReturnedTs, (DateTime?)null ).Create() ).ToArray();
-            var requirements =_fixture.Build<RankRequirement>().CreateMany( 10 ).Concat( relatedRequirements );
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
-            mockGuildDbContext.Setup( m => m.RankRequirements ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankRequirement>( requirements ) ).Object );
-            mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( relatedStatuses.Concat( unapprovedRelatedStatuses ) ) ).Object );
+            var approvalRecordAtt = rankApprovals.Skip( 2 ).First();
+            var rankAtt = _fixture.Build<Rank>().With( r => r.Id, approvalRelatedRankId ).Create();
+            approvalRecordAtt.Rank = rankAtt;
+            approvalRecordAtt.RankId = approvalRelatedRankId;
+            mockRankRepository.Setup( m => m.GetPendingRankApprovalsWithRankAsync( userIdForStatuses ) ).ReturnsAsync( new[] { approvalRecordAtt } );
+            var pendingReqsAtt = relatedRequirements.Skip( 3 ).Take( 3 ).ToArray();
+            mockRankRepository.Setup( m => m.GetPendingRequirementsWithStatusForApprovalAsync( approvalRelatedRankId, userIdForStatuses ) ).ReturnsAsync( (pendingReqsAtt, unapprovedRelatedStatuses) );
             var i = 0;
             var reqViewModels = new List<RankRequirementViewModel>();
             foreach ( var a in relatedRequirements.Skip( 3 ).Take( 3 ) )
@@ -305,7 +315,7 @@ namespace WarriorsGuild.Tests.Providers
                 var relatedStatus = unapprovedRelatedStatuses.Single( s => s.RankRequirementId == a.Id );
                 var viewModel =_fixture.Build<RankRequirementViewModel>().Create();
                 reqViewModels.Add( viewModel );
-                mockRankMapper.Setup( m => m.CreateRequirementViewModel( a, relatedStatus.WarriorCompleted, null, It.Is<IEnumerable<MinimalRingDetail>>( _ => _.Any() == false ), It.Is<IEnumerable<MinimalCrossDetail>>( _ => _.Any() == false ), associatedAttachments ) ).Returns( viewModel );
+                mockRankMapper.Setup( m => m.CreateRequirementViewModel( a, relatedStatus.WarriorCompleted, null, It.Is<IEnumerable<MinimalRingDetail>>( _ => _.Any() == false ), It.Is<IEnumerable<MinimalCrossDetail>>( _ => _.Any() == false ), associatedAttachments ?? Array.Empty<MinimalGoalDetail>() ) ).Returns( viewModel );
             }
 
             // Act
@@ -315,11 +325,11 @@ namespace WarriorsGuild.Tests.Providers
             // Assert
             Assert.AreEqual( 1, result.Count() );
             var resultRecord = result.First();
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Id, resultRecord.ApprovalRecordId );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().PercentComplete, resultRecord.PercentComplete );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().RankId, resultRecord.RankId );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Rank.Name, resultRecord.RankName );
-            Assert.AreEqual( rankApprovals.Skip( 2 ).First().Rank.ImageUploaded, resultRecord.RankImageUploaded );
+            Assert.AreEqual( approvalRecordAtt.Id, resultRecord.ApprovalRecordId );
+            Assert.AreEqual( approvalRecordAtt.PercentComplete, resultRecord.PercentComplete );
+            Assert.AreEqual( approvalRecordAtt.RankId, resultRecord.RankId );
+            Assert.AreEqual( approvalRecordAtt.Rank.Name, resultRecord.RankName );
+            Assert.AreEqual( approvalRecordAtt.Rank.ImageUploaded, resultRecord.RankImageUploaded );
             Assert.IsTrue( resultRecord.UnconfirmedRequirements.SequenceEqual( reqViewModels ) );
         }
 
@@ -417,7 +427,7 @@ namespace WarriorsGuild.Tests.Providers
             relatedApprovalRecord.Id = approvalRecordId;
             relatedApprovalRecord.UserId = userIdForStatuses;
 
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetRankApprovalByIdAsync( approvalRecordId ) ).ReturnsAsync( relatedApprovalRecord );
 
             mockUserProvider.Setup( m => m.UserIsRelatedToWarrior( myUserId, userIdForStatuses ) ).Returns( Task.FromResult( false ) );
 
@@ -439,9 +449,7 @@ namespace WarriorsGuild.Tests.Providers
             var unitUnderTest = this.CreateProvider();
             var approvalRecordId = Guid.NewGuid();
             var userIdForStatuses = USERID;
-            var myUserId = Guid.NewGuid().ToString();
-            var rankApprovals =_fixture.Build<RankApproval>().CreateMany( 3 );
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetRankApprovalByIdAsync( approvalRecordId ) ).ReturnsAsync( (RankApproval)null );
 
             // Act
             var result = await unitUnderTest.ApproveProgressAsync(
@@ -461,11 +469,10 @@ namespace WarriorsGuild.Tests.Providers
             var unitUnderTest = this.CreateProvider();
             var approvalRecordId = Guid.NewGuid();
             var userIdForStatuses = USERID;
-            var myUserId = Guid.NewGuid().ToString();
             var rankApprovals =_fixture.Build<RankApproval>().CreateMany( 3 );
             var relatedApprovalRecord = rankApprovals.Skip( 2 ).First();
-            //relatedApprovalRecord.Id = approvalRecordId;
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            relatedApprovalRecord.Id = Guid.NewGuid();
+            mockRankRepository.Setup( m => m.GetRankApprovalByIdAsync( approvalRecordId ) ).ReturnsAsync( (RankApproval)null );
 
             // Act
             var result = await unitUnderTest.ApproveProgressAsync(
@@ -490,8 +497,9 @@ namespace WarriorsGuild.Tests.Providers
             var relatedApprovalRecord = rankApprovals.Skip( 2 ).First();
             relatedApprovalRecord.Id = approvalRecordId;
             relatedApprovalRecord.UserId = userIdForStatuses;
+            relatedApprovalRecord.ApprovedAt = DateTime.UtcNow;
 
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetRankApprovalByIdAsync( approvalRecordId ) ).ReturnsAsync( relatedApprovalRecord );
             mockUserProvider.Setup( m => m.UserIsRelatedToWarrior( myUserId, userIdForStatuses ) ).Returns( Task.FromResult( true ) );
             // Act
             var result = await unitUnderTest.ApproveProgressAsync(
@@ -517,7 +525,7 @@ namespace WarriorsGuild.Tests.Providers
             relatedApprovalRecord.Id = approvalRecordId;
             relatedApprovalRecord.ApprovedAt = null;
             relatedApprovalRecord.UserId = userIdForStatuses;
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetRankApprovalByIdAsync( approvalRecordId ) ).ReturnsAsync( relatedApprovalRecord );
 
             var requirementStatus =_fixture.Build<RankStatus>().With( rs => rs.RankId, relatedApprovalRecord.RankId ).With( rs => rs.UserId, userIdForStatuses ).CreateMany( 2 ).ToList();
             var unapprovedRequirements =_fixture.Build<RankStatus>()
@@ -531,7 +539,8 @@ namespace WarriorsGuild.Tests.Providers
             var dummyStatuses =_fixture.Build<RankStatus>().With( rs => rs.GuardianCompleted, dummyApprovalDate ).CreateMany( 4 );
             requirementStatus.AddRange( unapprovedRequirements );
             requirementStatus.AddRange( dummyStatuses );
-            mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( requirementStatus ) ).Object );
+            var unapprovedStatuses = requirementStatus.Skip( 2 ).Take( 3 ).ToArray();
+            mockRankRepository.Setup( m => m.GetUnapprovedRankStatusesAsync( relatedApprovalRecord.RankId, relatedApprovalRecord.UserId ) ).ReturnsAsync( unapprovedStatuses );
 
             var currentDateTime = DateTime.UtcNow;
             mockDateTimeProvider.Setup( m => m.GetCurrentDateTime() ).Returns( currentDateTime );
@@ -542,7 +551,7 @@ namespace WarriorsGuild.Tests.Providers
                                                                                                     It.Is<IEnumerable<Guid>>( arg => unapprovedRequirements.Select( s => s.RankRequirementId ).SequenceEqual( arg ) ),
                                                                                                     relatedApprovalRecord.UserId ) )
                         .Returns( Task.FromResult( true ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).ReturnsAsync( 1 );
 
             // Act
             var result = await unitUnderTest.ApproveProgressAsync(
@@ -580,7 +589,7 @@ namespace WarriorsGuild.Tests.Providers
             relatedApprovalRecord.Id = approvalRecordId;
             relatedApprovalRecord.ApprovedAt = null;
             relatedApprovalRecord.UserId = userIdForStatuses;
-            mockGuildDbContext.Setup( m => m.RankApprovals ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankApproval>( rankApprovals ) ).Object );
+            mockRankRepository.Setup( m => m.GetRankApprovalByIdAsync( approvalRecordId ) ).ReturnsAsync( relatedApprovalRecord );
 
             var requirementStatus =_fixture.Build<RankStatus>().With( rs => rs.RankId, relatedApprovalRecord.RankId ).With( rs => rs.UserId, userIdForStatuses ).CreateMany( 2 ).ToList();
             var unapprovedRequirements =_fixture.Build<RankStatus>()
@@ -590,12 +599,8 @@ namespace WarriorsGuild.Tests.Providers
                                                 .With( rs => rs.RecalledByWarriorTs, (DateTime?)null )
                                                 .With( rs => rs.ReturnedTs, (DateTime?)null )
                                                 .CreateMany( 3 );
-            var dummyApprovalDate = DateTime.UtcNow.AddDays( -3 );
-            var dummyStatuses =_fixture.Build<RankStatus>().With( rs => rs.GuardianCompleted, dummyApprovalDate ).CreateMany( 4 );
-            requirementStatus.AddRange( unapprovedRequirements );
-            requirementStatus.AddRange( dummyStatuses );
-            mockGuildDbContext.Setup( m => m.RankStatuses ).Returns( TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( requirementStatus ) ).Object );
-
+            var unapprovedStatusesList = requirementStatus.Skip( 2 ).Take( 3 ).ToArray();
+            mockRankRepository.Setup( m => m.GetUnapprovedRankStatusesAsync( relatedApprovalRecord.RankId, relatedApprovalRecord.UserId ) ).ReturnsAsync( unapprovedStatusesList );
 
             mockUserProvider.Setup( m => m.UserIsRelatedToWarrior( myUserId, userIdForStatuses ) ).Returns( Task.FromResult( true ) );
 

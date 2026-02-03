@@ -37,7 +37,7 @@ namespace WarriorsGuild.Tests.Providers
 
         private Guid USERID = Guid.NewGuid();
 
-        private Mock<IGuildDbContext> mockGuildDbContext;
+        private Mock<IUnitOfWork> mockUnitOfWork;
         private Mock<IRankRepository> mockRankRepository;
         private Mock<IRankMapper> mockRankMapper;
         private Mock<IRankStatusProvider> mockRankStatusProvider;
@@ -47,7 +47,7 @@ namespace WarriorsGuild.Tests.Providers
         {
             this.mockRepository = new MockRepository( MockBehavior.Strict );
 
-            this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
+            this.mockUnitOfWork = this.mockRepository.Create<IUnitOfWork>();
             this.mockRankRepository = this.mockRepository.Create<IRankRepository>();
             this.mockRankMapper = this.mockRepository.Create<IRankMapper>();
             this.mockRankStatusProvider = this.mockRepository.Create<IRankStatusProvider>();
@@ -62,7 +62,7 @@ namespace WarriorsGuild.Tests.Providers
         private RankRequirementProvider CreateProvider()
         {
             return new RankRequirementProvider(
-                this.mockGuildDbContext.Object,
+                this.mockUnitOfWork.Object,
                 this.mockRankRepository.Object,
                 this.mockRankMapper.Object,
                 mockRankStatusProvider.Object);
@@ -131,7 +131,7 @@ namespace WarriorsGuild.Tests.Providers
             var requirements = _fixture.Build<RankRequirementViewModel>().CreateMany( 3 );
             mockRankRepository.Setup( m => m.GetRequirements( id ) ).Returns( CreateAsyncQueryable( existingRequirementsList ) );
             mockRankRepository.Setup( m => m.UpdateRequirementsAsync( id, It.IsAny<IEnumerable<RankRequirementViewModel>>(), It.IsAny<IEnumerable<RankRequirement>>() ) ).Returns( Task.CompletedTask );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).ReturnsAsync( 1 );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).ReturnsAsync( 1 );
 
             await unitUnderTest.UpdateRequirementsAsync( id, requirements );
         }

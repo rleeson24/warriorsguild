@@ -37,7 +37,7 @@ namespace WarriorsGuild.Tests.Providers
 
         private Guid USERID = Guid.NewGuid();
 
-        private Mock<IGuildDbContext> mockGuildDbContext;
+        private Mock<IUnitOfWork> mockUnitOfWork;
         private Mock<IRankRepository> mockRankRepository;
         private Mock<IRankMapper> mockRankMapper;
         private Mock<IBlobProvider> mockAttachmentProvider;
@@ -47,7 +47,7 @@ namespace WarriorsGuild.Tests.Providers
         {
             this.mockRepository = new MockRepository( MockBehavior.Strict );
 
-            this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
+            this.mockUnitOfWork = this.mockRepository.Create<IUnitOfWork>();
             this.mockRankRepository = this.mockRepository.Create<IRankRepository>();
             this.mockRankMapper = this.mockRepository.Create<IRankMapper>();
             this.mockAttachmentProvider = this.mockRepository.Create<IBlobProvider>();
@@ -62,7 +62,7 @@ namespace WarriorsGuild.Tests.Providers
         private RanksProvider CreateProvider()
         {
             return new RanksProvider(
-                this.mockGuildDbContext.Object,
+                this.mockUnitOfWork.Object,
                 this.mockRankRepository.Object,
                 this.mockRankMapper.Object,
                 this.mockAttachmentProvider.Object);
@@ -249,7 +249,7 @@ namespace WarriorsGuild.Tests.Providers
             var expectedRank = _fixture.Build<Rank>().Create();
             mockRankRepository.Setup( m => m.Get( id, true ) ).Returns( expectedRank );
             mockRankRepository.Setup( m => m.Update( id, expectedRank ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
             await unitUnderTest.UpdateAsync( id, rank );
@@ -275,7 +275,7 @@ namespace WarriorsGuild.Tests.Providers
             mockRankRepository.Setup( m => m.GetMaxRankIndexAsync() ).Returns( Task.FromResult( maxIndex ) );
             mockRankMapper.Setup( m => m.CreateRank( input.Description, input.Name, maxIndex + 1 ) ).Returns( newRank );
             mockRankRepository.Setup( m => m.Add( newRank ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
             var result = await unitUnderTest.AddAsync( input );
@@ -321,7 +321,7 @@ namespace WarriorsGuild.Tests.Providers
             var expectedRanks = _fixture.Build<Rank>().CreateMany( 3 ).ToList();
             mockRankRepository.Setup( m => m.UpdateOrder( request ) );
             mockRankRepository.Setup( m => m.List() ).Returns( CreateAsyncQueryable( expectedRanks ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             var result = await unitUnderTest.UpdateOrderAsync( request );
 
@@ -364,7 +364,7 @@ namespace WarriorsGuild.Tests.Providers
             //mockAttachmentProvider.Setup( m => m.UploadFileAsync( WarriorsGuildFileType.RankImage, new byte[0], id.ToString(), mediaType ) ).Returns( Task.FromResult( dummyResult ) );
             mockRankRepository.Setup( m => m.Get( id, false ) ).Returns( rank );
             mockRankRepository.Setup( m => m.SetHasImage( rank, ext ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
             await unitUnderTest.UploadImageAsync(
@@ -374,7 +374,7 @@ namespace WarriorsGuild.Tests.Providers
                 mediaType );
 
             mockRankRepository.Verify( m => m.SetHasImage( rank, ext ), Times.Once );
-            mockGuildDbContext.Verify( m => m.SaveChangesAsync(), Times.Once );
+            mockUnitOfWork.Verify( m => m.SaveChangesAsync(), Times.Once );
         }
     }
 }

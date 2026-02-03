@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -62,7 +62,7 @@ namespace WarriorsGuild.Models
 
                      return response;
                  }
-                 catch ( Exception ex )
+                 catch ( Exception )
                  {
                      return new HttpResponseMessage( HttpStatusCode.NotFound );
                  }

@@ -37,7 +37,7 @@ namespace WarriorsGuild.Tests.Providers
 
         private Guid USERID = Guid.NewGuid();
 
-        private Mock<IGuildDbContext> mockGuildDbContext;
+        private Mock<IUnitOfWork> mockUnitOfWork;
         private Mock<IRankRepository> mockRankRepository;
         private Mock<IRankMapper> mockRankMapper;
         private Mock<IDateTimeProvider> mockDateTimeProvider;
@@ -49,7 +49,7 @@ namespace WarriorsGuild.Tests.Providers
         {
             this.mockRepository = new MockRepository( MockBehavior.Strict );
 
-            this.mockGuildDbContext = this.mockRepository.Create<IGuildDbContext>();
+            this.mockUnitOfWork = this.mockRepository.Create<IUnitOfWork>();
             this.mockRankRepository = this.mockRepository.Create<IRankRepository>();
             this.mockRankMapper = this.mockRepository.Create<IRankMapper>();
             this.mockDateTimeProvider = this.mockRepository.Create<IDateTimeProvider>();
@@ -66,7 +66,7 @@ namespace WarriorsGuild.Tests.Providers
         private RankStatusProvider CreateProvider()
         {
             return new RankStatusProvider(
-                this.mockGuildDbContext.Object,
+                this.mockUnitOfWork.Object,
                 this.mockRankRepository.Object,
                 this.mockRankMapper.Object,
                 this.mockDateTimeProvider.Object,
@@ -305,7 +305,7 @@ namespace WarriorsGuild.Tests.Providers
             var unitUnderTest = this.CreateProvider();
             var rankStatus = _fixture.Build<RankStatus>().Create();
             mockRankRepository.Setup( m => m.AddStatusEntry( rankStatus ) );
-            mockGuildDbContext.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockUnitOfWork.Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
 
             // Act
             var result = await unitUnderTest.PostRankStatusAsync( rankStatus );
@@ -368,57 +368,27 @@ namespace WarriorsGuild.Tests.Providers
             //Assert.AreEqual( relatedCrosses.Count(), removedCrosses );
             //Assert.AreEqual( relatedRings.Count(), removedRings );
 
-            var sequence = new MockSequence();
-            // Arrange
+            // Arrange - provider delegates to repository
             var unitUnderTest = this.CreateProvider();
             var rankStatus =_fixture.Build<RankStatusUpdateModel>().Create();
-            var rankStatuses =_fixture.Build<RankStatus>().With( rs => rs.RankId, rankStatus.RankId )
-                                                                .With( rs => rs.RankRequirementId, rankStatus.RankRequirementId )
-                                                                .With( rs => rs.UserId, USERID )
-                                                                .CreateMany( 6 );
-            rankStatuses.Skip( 2 ).First().RecalledByWarriorTs = null;
-            rankStatuses.Skip( 2 ).First().ReturnedTs = null;
-            rankStatuses.Skip( 2 ).First().GuardianCompleted = null;
-            var rankStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( rankStatuses ) );
-            var pocAtts = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<ProofOfCompletionAttachment>(_fixture.Build<ProofOfCompletionAttachment>()
-                                                                                                                    .With( a => a.RequirementId, rankStatus.RankRequirementId )
-                                                                                                                    .With( a => a.UserId, USERID ).CreateMany( 2 ) ), true, false );
-
-            var rankStatusCrossesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatusCompletedCross>( Array.Empty<RankStatusCompletedCross>() ) );
-            var rankStatusRingsDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatusCompletedRing>( Array.Empty<RankStatusCompletedRing>() ) );
-
-            mockGuildDbContext.InSequence( sequence ).Setup( d => d.RankStatuses ).Returns( rankStatusesDbSet.Object );
-            mockGuildDbContext.InSequence( sequence ).Setup( m => m.ProofOfCompletionAttachments ).Returns( pocAtts.Object );
-            foreach ( var poc in pocAtts.Object )
-            {
-                mockGuildDbContext.InSequence( sequence ).Setup( m => m.SetDeleted( poc ) );
-            }
-            mockGuildDbContext.InSequence( sequence ).Setup( m => m.RankStatusCrosses ).Returns( rankStatusCrossesDbSet.Object );
-            mockGuildDbContext.InSequence( sequence ).Setup( m => m.RankStatusRings ).Returns( rankStatusRingsDbSet.Object );
-            mockGuildDbContext.InSequence( sequence ).Setup( m => m.SaveChangesAsync() ).Returns( Task.FromResult( 1 ) );
+            mockRankRepository.Setup( m => m.DeleteRankStatusWithRelatedAsync( rankStatus, USERID ) ).ReturnsAsync( new RecordCompletionResponse { Success = true } );
 
             // Act
-            await unitUnderTest.DeleteRankStatusAsync(
+            var result = await unitUnderTest.DeleteRankStatusAsync(
                 rankStatus, USERID );
 
-            Assert.IsTrue( rankStatuses.Skip( 2 ).First().RecalledByWarriorTs.HasValue );
+            Assert.IsTrue( result.Success );
         }
 
         [Test]
         public async Task DeleteRankStatusAsync_WhenRankStatusFoundButAlreadyApproved_TheRecalledByWarriorTsShouldNotBeSet()
         {
             
-            // Arrange
+            // Arrange - provider delegates to repository
             var unitUnderTest = this.CreateProvider();
             var rankStatus =_fixture.Build<RankStatusUpdateModel>().Create();
-            var rankStatuses =_fixture.Build<RankStatus>().With( rs => rs.RankId, rankStatus.RankId )
-                                                                .With( rs => rs.RankRequirementId, rankStatus.RankRequirementId )
-                                                                .With( rs => rs.UserId, USERID )
-                                                                .CreateMany( 6 );
-            rankStatuses.Skip( 2 ).First().RecalledByWarriorTs = null;
-            rankStatuses.Skip( 2 ).First().ReturnedTs = null;
-            var rankStatusesDbSet = TestHelpers.CreateDbSetMock( new TestAsyncEnumerable<RankStatus>( rankStatuses ) );
-            mockGuildDbContext.Setup( d => d.RankStatuses ).Returns( rankStatusesDbSet.Object );
+            mockRankRepository.Setup( m => m.DeleteRankStatusWithRelatedAsync( rankStatus, USERID ) )
+                .ReturnsAsync( new RecordCompletionResponse { Success = false, Error = "This requirement completion cannot be undone because it has already been approved" } );
 
             // Act
             var response = await unitUnderTest.DeleteRankStatusAsync(

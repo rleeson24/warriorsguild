@@ -205,7 +205,6 @@
 		<PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.2.2" />
 		<PackageReference Include="Azure.Identity" Version="1.17.1" />
 		<PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
-		<PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
 		<PackageReference Include="IdentityModel" Version="6.0.0" />
 
 		<PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.9.4">
@@ -1666,5 +1665,9 @@
 	<ItemGroup>
 	  <UpToDateCheckInput Remove="Views\Shared\_CompletedItemListPopup.cshtml" />
 	</ItemGroup>
+
+	<Target Name="BundleWithEsbuild" AfterTargets="Build">
+	  <Exec Command="npm run bundle" WorkingDirectory="$(ProjectDir)" />
+	</Target>
 
 </Project>
