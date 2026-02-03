@@ -1,0 +1,100 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, release]
+  pull_request:
+    branches: [main, release]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  SOLUTION: '**/*.sln'
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: npm install
+        working-directory: WarriorsGuild
+        run: npm ci
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} --configuration Release --no-build --verbosity normal
+
+      - name: Publish
+        run: dotnet publish WarriorsGuild/WarriorsGuild.csproj --configuration Release --output ${{ runner.temp }}/publish --no-build
+
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version 10.0.2
+
+      - name: Generate migration scripts
+        working-directory: WarriorsGuild.Data
+        run: |
+          dotnet ef migrations script --output $env:RUNNER_TEMP/migrations_script.sql --context ApplicationDbContext --idempotent --no-build
+          dotnet ef migrations script --output $env:RUNNER_TEMP/is4_config_migrations_script.sql --context ConfigurationDbContext --idempotent --no-build
+          dotnet ef migrations script --output $env:RUNNER_TEMP/is4_pg_migrations_script.sql --context PersistedGrantDbContext --idempotent --no-build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop
+          path: |
+            ${{ runner.temp }}/publish
+            ${{ runner.temp }}/migrations_script.sql
+            ${{ runner.temp }}/is4_config_migrations_script.sql
+            ${{ runner.temp }}/is4_pg_migrations_script.sql
+
+  deploy-staging:
+    needs: build-and-test
+    runs-on: windows-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: drop
+          path: ${{ runner.temp }}/drop
+
+      - name: Deploy to Azure App Service (Staging)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME_STAGING }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          package: ${{ runner.temp }}/drop/publish
+
+  deploy-production:
+    needs: build-and-test
+    runs-on: windows-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+    environment: production
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: drop
+          path: ${{ runner.temp }}/drop
+
+      - name: Deploy to Azure App Service (Production)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME_PRODUCTION }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PRODUCTION }}
+          package: ${{ runner.temp }}/drop/publish
